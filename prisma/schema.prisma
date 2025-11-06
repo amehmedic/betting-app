@@ -18,6 +18,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   wallets       Wallet[]
+  blackjackGames BlackjackGame[]
 }
 
 model Wallet {
@@ -28,6 +29,7 @@ model Wallet {
   held      BigInt   @default(0)
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
+  blackjackGames BlackjackGame[]
   ledger    LedgerEntry[]
 }
 
@@ -39,6 +41,27 @@ model LedgerEntry {
   refId     String?
   createdAt DateTime @default(now())
   wallet    Wallet   @relation(fields: [walletId], references: [id])
+}
+
+model BlackjackGame {
+  id             String   @id @default(cuid())
+  userId         String
+  walletId       String
+  bet            BigInt
+  deck           Json
+  playerHand     Json
+  dealerHand     Json
+  playerActions  Json
+  dealerActions  Json
+  status         String   @default("player")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id])
+  wallet Wallet @relation(fields: [walletId], references: [id])
+
+  @@index([userId])
+  @@index([walletId])
 }
 
 // --- NextAuth standard models ---
