@@ -80,13 +80,18 @@ export async function POST(req: Request) {
     }
   }
 
-  const wallet = await prisma.wallet.findFirst({
+  let wallet = await prisma.wallet.findFirst({
     where: { userId: session.user.id, currency: "USD" },
   });
 
   if (!wallet) {
-    return NextResponse.json({ error: "Wallet not found" }, { status: 404 });
+    wallet = await prisma.wallet.create({
+      data: { userId: session.user.id, currency: "USD" },
+    });
   }
+
+  const ensuredWallet = wallet;
+  const walletId = ensuredWallet.id;
 
   const stakes = normalized.map((bet) => Math.round(bet.amount * 100));
   const totalStakeCents = stakes.reduce((sum, cents) => sum + cents, 0);
@@ -96,7 +101,7 @@ export async function POST(req: Request) {
   }
 
   const totalStakeBigInt = BigInt(totalStakeCents);
-  if (wallet.balance < totalStakeBigInt) {
+  if (ensuredWallet.balance < totalStakeBigInt) {
     return NextResponse.json({ error: "Insufficient balance" }, { status: 400 });
   }
 
@@ -144,15 +149,15 @@ export async function POST(req: Request) {
 
   const updatedWallet = await prisma.$transaction(async (tx) => {
     const updated = await tx.wallet.update({
-      where: { id: wallet.id },
+      where: { id: walletId },
       data: {
-        balance: wallet.balance - totalStakeBigInt + totalPayoutBigInt,
+        balance: ensuredWallet.balance - totalStakeBigInt + totalPayoutBigInt,
       },
     });
 
     await tx.ledgerEntry.create({
       data: {
-        walletId: wallet.id,
+        walletId,
         amount: -totalStakeBigInt,
         kind: "lucky6_bet",
         refId,
@@ -162,7 +167,7 @@ export async function POST(req: Request) {
     if (totalPayoutCents > 0) {
       await tx.ledgerEntry.create({
         data: {
-          walletId: wallet.id,
+          walletId,
           amount: totalPayoutBigInt,
           kind: "lucky6_win",
           refId,

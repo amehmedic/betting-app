@@ -45,12 +45,13 @@ export async function POST(req: Request) {
     );
   }
 
-  const wallet = await prisma.wallet.findFirst({
-    where: { userId: session.user.id, currency: "USD" },
-  });
-  if (!wallet) {
-    return NextResponse.json({ error: "Wallet not found" }, { status: 404 });
-  }
+  const wallet =
+    (await prisma.wallet.findFirst({
+      where: { userId: session.user.id, currency: "USD" },
+    })) ??
+    (await prisma.wallet.create({
+      data: { userId: session.user.id, currency: "USD" },
+    }));
   if (wallet.balance < bet) {
     return NextResponse.json(
       { error: "Insufficient balance" },

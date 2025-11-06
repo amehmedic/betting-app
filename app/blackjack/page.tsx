@@ -88,6 +88,12 @@ function formatWalletAmount(value: string) {
   return usd.format(Number(value) / 100);
 }
 
+function notifyWalletUpdate() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("wallet:update"));
+  }
+}
+
 function toGameView(payload: BlackjackStateResponse): GameView {
   const phase: GamePhase = payload.state === "player" ? "player" : "finished";
 
@@ -140,9 +146,11 @@ export default function BlackjackPage() {
         setGame(toGameView(json));
         if (json.wallet) {
           setWallet(json.wallet);
+          notifyWalletUpdate();
         }
       } else if ("wallet" in json && json.wallet) {
         setWallet(json.wallet);
+        notifyWalletUpdate();
       }
     } catch (e) {
       console.error(e);
@@ -169,6 +177,7 @@ export default function BlackjackPage() {
       setGame(toGameView(json as BlackjackStateResponse));
       if ((json as BlackjackStateResponse).wallet) {
         setWallet((json as BlackjackStateResponse).wallet ?? null);
+        notifyWalletUpdate();
       }
     } catch (e) {
       console.error(e);
@@ -198,6 +207,7 @@ export default function BlackjackPage() {
       setGame(toGameView(json as BlackjackStateResponse));
       if ((json as BlackjackStateResponse).wallet) {
         setWallet((json as BlackjackStateResponse).wallet ?? null);
+        notifyWalletUpdate();
       }
     } catch (e) {
       console.error(e);
@@ -227,6 +237,7 @@ export default function BlackjackPage() {
       setGame(toGameView(json as BlackjackStateResponse));
       if ((json as BlackjackStateResponse).wallet) {
         setWallet((json as BlackjackStateResponse).wallet ?? null);
+        notifyWalletUpdate();
       }
     } catch (e) {
       console.error(e);

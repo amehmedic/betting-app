@@ -4,6 +4,12 @@ import DashboardShell from "@/components/DashboardShell";
 
 const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
+function notifyWalletUpdate() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("wallet:update"));
+  }
+}
+
 export default function CoinPage() {
   const [amount, setAmount] = useState("1.00"); // keep raw input so users can edit freely
   const [pick, setPick] = useState<"heads" | "tails">("heads");
@@ -43,6 +49,8 @@ export default function CoinPage() {
         Number.isFinite(balanceCents) ? usd.format(balanceCents / 100) : "n/a"
       }`
     );
+
+    notifyWalletUpdate();
   }
 
   return (

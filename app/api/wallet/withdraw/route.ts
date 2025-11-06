@@ -33,14 +33,20 @@ export async function POST(req: Request) {
       data: { userId: session.user.id, currency: "USD" },
     }));
 
+  if (wallet.balance < amt) {
+    return NextResponse.json({ error: "Insufficient balance" }, { status: 400 });
+  }
+
   const updated = await prisma.$transaction(async (tx) => {
     const w = await tx.wallet.update({
       where: { id: wallet.id },
-      data: { balance: wallet.balance + amt },
+      data: { balance: wallet.balance - amt },
     });
+
     await tx.ledgerEntry.create({
-      data: { walletId: wallet.id, amount: amt, kind: "deposit", refId: "faucet" },
+      data: { walletId: wallet.id, amount: -amt, kind: "withdrawal" },
     });
+
     return w;
   });
 

@@ -34,11 +34,13 @@ export async function POST(req: Request) {
   const userId = session.user.id;
 
   // Find the USD wallet
-  const wallet = await prisma.wallet.findFirst({
+  let wallet = await prisma.wallet.findFirst({
     where: { userId, currency: "USD" },
   });
   if (!wallet) {
-    return NextResponse.json({ error: "Wallet not found" }, { status: 404 });
+    wallet = await prisma.wallet.create({
+      data: { userId, currency: "USD" },
+    });
   }
 
   const amt = BigInt(Math.round(amount * 100)); // converts $ to cents

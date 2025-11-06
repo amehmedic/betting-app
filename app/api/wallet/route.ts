@@ -7,15 +7,20 @@ const serialize = (obj: any) =>
   JSON.parse(JSON.stringify(obj, (_k, v) => (typeof v === "bigint" ? v.toString() : v)));
 
 export async function GET() {
-  const session = await getServerSession(authConfig); // ← v4 style
+  const session = await getServerSession(authConfig);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const wallet = await prisma.wallet.findFirst({
-    where: { userId: session.user.id, currency: "PLAY" },
+  let wallet = await prisma.wallet.findFirst({
+    where: { userId: session.user.id, currency: "USD" },
   });
-  if (!wallet) return NextResponse.json({ error: "Wallet not found" }, { status: 404 });
+
+  if (!wallet) {
+    wallet = await prisma.wallet.create({
+      data: { userId: session.user.id, currency: "USD" },
+    });
+  }
 
   const ledger = await prisma.ledgerEntry.findMany({
     where: { walletId: wallet.id },

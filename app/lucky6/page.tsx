@@ -53,6 +53,12 @@ const initialColorAmounts: Record<Lucky6Color, string> = LUCKY6_COLORS.reduce(
   {} as Record<Lucky6Color, string>
 );
 
+function notifyWalletUpdate() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("wallet:update"));
+  }
+}
+
 export default function Lucky6Page() {
   const [parityPick, setParityPick] = useState<"even" | "odd">("even");
   const [parityAmount, setParityAmount] = useState("");
@@ -134,6 +140,7 @@ export default function Lucky6Page() {
       }
 
       setLastResult(json as Lucky6Response);
+      notifyWalletUpdate();
     } catch (err) {
       console.error(err);
       setError("Lucky 6 round failed");
