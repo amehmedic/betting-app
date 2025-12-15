@@ -68,8 +68,8 @@ export default function DashboardShell({
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100">
-      <div className="border-b border-slate-900/40 bg-slate-950/80 backdrop-blur">
+    <div className="min-h-screen bg-gradient-to-br from-[#05010a] via-[#0f1838] to-[#230a1c] text-slate-100">
+      <div className="border-b border-[#1f1630] bg-[#05010a]/85 backdrop-blur">
         <div className="flex h-16 w-full items-center px-6">
           <div className="flex flex-1 items-center gap-4">
             <div className="flex items-center gap-3">
@@ -98,7 +98,7 @@ export default function DashboardShell({
                     className={clsx(
                       "rounded-full px-3.5 py-1.5 transition",
                       active
-                        ? "bg-emerald-500 text-slate-950 shadow-sm shadow-emerald-500/40"
+                        ? "bg-[#c5305f] text-white shadow-sm shadow-[#c5305f]/40"
                         : "text-slate-300/90 hover:text-white hover:underline"
                     )}
                   >
@@ -111,7 +111,7 @@ export default function DashboardShell({
           <div className="flex flex-1 items-center justify-end gap-5 text-sm font-semibold uppercase tracking-wide text-slate-100">
             <Link
               href="/wallet"
-              className="flex items-center gap-4 rounded-full border border-emerald-400/30 px-4 py-1.5 text-base text-white shadow-inner shadow-emerald-500/20 transition hover:border-emerald-300 hover:text-emerald-100"
+              className="flex items-center gap-4 rounded-full border border-[#5c7cfa]/30 px-4 py-1.5 text-base text-white shadow-inner shadow-[#5c7cfa]/25 transition hover:border-[#7c91ff] hover:text-[#cdd8ff]"
               title="View wallet details"
             >
               <span>Balance</span>
@@ -121,7 +121,7 @@ export default function DashboardShell({
             </Link>
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="rounded-xl border border-slate-500/60 px-5 py-2 text-sm font-semibold tracking-wide text-slate-100 transition hover:bg-slate-800/80 hover:text-white"
+              className="rounded-xl border border-[#c5305f]/60 px-5 py-2 text-sm font-semibold tracking-wide text-white transition hover:bg-[#c5305f]/20"
             >
               Logout
             </button>
@@ -136,7 +136,7 @@ export default function DashboardShell({
             <p className="mt-1 text-sm text-slate-400">{description}</p>
           ) : null}
         </header>
-        <section className="rounded-2xl border border-white/10 bg-slate-950/60 p-6 shadow-2xl shadow-emerald-500/10">
+        <section className="rounded-2xl border border-white/10 bg-[#060817]/70 p-6 shadow-2xl shadow-[#c5305f]/10">
           {children}
         </section>
       </main>

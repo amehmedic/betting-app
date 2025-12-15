@@ -50,9 +50,12 @@ model BlackjackGame {
   bet            BigInt
   deck           Json
   playerHand     Json
+  playerHands    Json
   dealerHand     Json
   playerActions  Json
+  handBets       Json
   dealerActions  Json
+  activeHand     Int      @default(0)
   status         String   @default("player")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

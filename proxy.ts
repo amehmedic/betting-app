@@ -1,6 +1,7 @@
 import { withAuth } from "next-auth/middleware";
+import type { NextRequest } from "next/server";
 
-export default withAuth({
+const authProxy = withAuth({
   callbacks: {
     authorized: ({ token }) => !!token,
   },
@@ -8,6 +9,10 @@ export default withAuth({
     signIn: "/login",
   },
 });
+
+export function proxy(req: NextRequest) {
+  return authProxy(req);
+}
 
 export const config = {
   matcher: [

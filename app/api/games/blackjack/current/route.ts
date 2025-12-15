@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
-import { determineResult } from "@/lib/blackjack";
-import { cloneStateFromRecord, serializeWallet } from "../helpers";
+import { cloneStateFromRecord, serializeWallet, summarizeState } from "../helpers";
 
 export const runtime = "nodejs";
 
@@ -30,7 +29,8 @@ export async function GET() {
   }
 
   const state = cloneStateFromRecord(game);
-  const summary = determineResult(state.playerHand, state.dealerHand);
+  const dealerRevealed = game.status !== "player";
+  const summary = summarizeState(state, dealerRevealed);
 
   return NextResponse.json({
     ok: true,
@@ -38,17 +38,21 @@ export async function GET() {
     state: game.status,
     gameId: game.id,
     bet: Number(game.bet) / 100,
-    dealerRevealed: game.status !== "player",
-    playerHand: state.playerHand,
+    handBets: state.handBets.map((b) => b / 100),
+    dealerRevealed,
+    playerHands: state.playerHands,
     dealerHand: state.dealerHand,
     playerActions: state.playerActions,
     dealerActions: state.dealerActions,
-    playerTotal: summary.playerTotal,
+    activeHand: state.activeHand,
+    playerTotals: summary.playerTotals,
     dealerTotal: summary.dealerTotal,
-    playerBust: summary.playerBust,
+    playerBusts: summary.playerBusts,
     dealerBust: summary.dealerBust,
-    playerBlackjack: summary.playerBlackjack,
+    playerBlackjacks: summary.playerBlackjacks,
     dealerBlackjack: summary.dealerBlackjack,
+    handResults: summary.handResults?.map((r) => r.result),
+    result: summary.overallResult,
     wallet: serializeWallet(game.wallet),
   });
 }

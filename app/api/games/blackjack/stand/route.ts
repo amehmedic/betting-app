@@ -3,12 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
 import { z } from "zod";
-import { dealerPlay, determineResult } from "@/lib/blackjack";
+import { dealerPlay, determineRoundResult, evaluateHand } from "@/lib/blackjack";
 import {
   cloneStateFromRecord,
   resolveBlackjackGame,
   serializeStateForUpdate,
   serializeWallet,
+  summarizeState,
 } from "../helpers";
 
 const standSchema = z.object({
@@ -30,6 +31,19 @@ export async function POST(req: Request) {
   }
 
   const { gameId } = parsed.data;
+
+  const nextIncompleteHand = (hands: any[], actions: any[], startAt = 0) => {
+    const len = hands.length;
+    for (let offset = 0; offset < len; offset += 1) {
+      const idx = (startAt + offset) % len;
+      const hand = hands[idx];
+      const acts = actions[idx] ?? [];
+      const evalHand = evaluateHand(hand);
+      const complete = evalHand.bust || acts.includes("stand") || acts.includes("double");
+      if (!complete) return idx;
+    }
+    return -1;
+  };
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -54,37 +68,56 @@ export async function POST(req: Request) {
       }
 
       const state = cloneStateFromRecord(game);
-      if (!state.playerActions.includes("stand")) {
-        state.playerActions.push("stand");
+      if (!state.playerActions[state.activeHand]?.includes("stand")) {
+        state.playerActions[state.activeHand]?.push("stand");
       }
 
-      const dealerTurn = dealerPlay(state);
-      const nextState = dealerTurn.state;
+      let nextState = state;
+      let status: "player" | "finished" = "player";
+      const nextActiveIndex = nextIncompleteHand(
+        nextState.playerHands,
+        nextState.playerActions,
+        nextState.activeHand + 1
+      );
+      if (nextActiveIndex !== -1) {
+        nextState.activeHand = nextActiveIndex;
+      } else {
+        const dealerTurn = dealerPlay(state);
+        nextState = dealerTurn.state;
+        status = "finished";
+      }
 
       const updatedGame = await tx.blackjackGame.update({
         where: { id: game.id },
         data: {
           ...serializeStateForUpdate(nextState),
-          status: "finished",
+          status,
         },
       });
 
-      const resolution = determineResult(
-        nextState.playerHand,
-        nextState.dealerHand
-      );
-      const wallet = await resolveBlackjackGame(
-        tx,
-        updatedGame,
-        resolution
-      );
+      if (status === "finished") {
+        const resolution = determineRoundResult(nextState.playerHands, nextState.dealerHand, nextState.handBets);
+        const wallet = await resolveBlackjackGame(
+          tx,
+          updatedGame,
+          resolution,
+          nextState.handBets
+        );
+
+        return {
+          type: "finished" as const,
+          bet: Number(updatedGame.bet) / 100,
+          state: nextState,
+          resolution,
+          wallet,
+        };
+      }
 
       return {
-        type: "finished" as const,
-        bet: Number(updatedGame.bet) / 100,
+        type: "player" as const,
         state: nextState,
-        resolution,
-        wallet,
+        bet: Number(updatedGame.bet) / 100,
+        gameId: game.id,
       };
     });
 
@@ -92,17 +125,49 @@ export async function POST(req: Request) {
       return result.response;
     }
 
+    if (result.type === "finished") {
+      const summary = summarizeState(result.state, true);
+      return NextResponse.json({
+        ok: true,
+        state: "finished",
+        dealerRevealed: true,
+        bet: result.bet,
+        handBets: result.state.handBets.map((b) => b / 100),
+        playerHands: result.state.playerHands,
+        dealerHand: result.state.dealerHand,
+        playerActions: result.state.playerActions,
+        dealerActions: result.state.dealerActions,
+        playerTotals: summary.playerTotals,
+        dealerTotal: summary.dealerTotal,
+        playerBusts: summary.playerBusts,
+        dealerBust: summary.dealerBust,
+        playerBlackjacks: summary.playerBlackjacks,
+        dealerBlackjack: summary.dealerBlackjack,
+        handResults: summary.handResults?.map((r) => r.result),
+        result: summary.overallResult,
+        wallet: serializeWallet(result.wallet),
+      });
+    }
+
+    const summary = summarizeState(result.state, false);
     return NextResponse.json({
       ok: true,
-      state: "finished",
-      dealerRevealed: true,
+      state: "player",
+      dealerRevealed: false,
       bet: result.bet,
-      playerHand: result.state.playerHand,
+      gameId: result.gameId,
+      handBets: result.state.handBets.map((b) => b / 100),
+      playerHands: result.state.playerHands,
       dealerHand: result.state.dealerHand,
       playerActions: result.state.playerActions,
       dealerActions: result.state.dealerActions,
-      ...result.resolution,
-      wallet: serializeWallet(result.wallet),
+      activeHand: result.state.activeHand,
+      playerTotals: summary.playerTotals,
+      dealerTotal: summary.dealerTotal,
+      playerBusts: summary.playerBusts,
+      dealerBust: summary.dealerBust,
+      playerBlackjacks: summary.playerBlackjacks,
+      dealerBlackjack: summary.dealerBlackjack,
     });
   } catch (err: unknown) {
     console.error(err);

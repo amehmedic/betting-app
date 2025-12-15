@@ -191,7 +191,7 @@ export default function Lucky6Page() {
                 value={parityAmount}
                 onChange={(e) => setParityAmount(e.target.value)}
                 placeholder="Stake (USD)"
-                className="w-full rounded border border-white/20 bg-slate-900/60 px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+              className="w-full rounded border border-white/20 bg-slate-900/60 px-3 py-2 text-sm text-white focus:border-[#5c7cfa] focus:outline-none focus:ring-2 focus:ring-[#5c7cfa]/30"
               />
             </fieldset>
 
@@ -222,7 +222,7 @@ export default function Lucky6Page() {
                 value={highLowAmount}
                 onChange={(e) => setHighLowAmount(e.target.value)}
                 placeholder="Stake (USD)"
-                className="w-full rounded border border-white/20 bg-slate-900/60 px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+              className="w-full rounded border border-white/20 bg-slate-900/60 px-3 py-2 text-sm text-white focus:border-[#5c7cfa] focus:outline-none focus:ring-2 focus:ring-[#5c7cfa]/30"
               />
             </fieldset>
           </div>
@@ -262,7 +262,7 @@ export default function Lucky6Page() {
                       }))
                     }
                     placeholder="Stake (USD)"
-                    className="w-full rounded border border-white/20 bg-slate-950/70 px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+                    className="w-full rounded border border-white/20 bg-slate-950/70 px-3 py-2 text-sm text-white focus:border-[#5c7cfa] focus:outline-none focus:ring-2 focus:ring-[#5c7cfa]/30"
                   />
                 </div>
               ))}
@@ -273,14 +273,14 @@ export default function Lucky6Page() {
             <button
               onClick={play}
               disabled={busy}
-              className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-500/50"
+            className="rounded-lg bg-[#c5305f] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#a61a42] disabled:cursor-not-allowed disabled:bg-[#c5305f]/50"
             >
               {busy ? "Drawing..." : "Play Lucky 6"}
             </button>
             <button
               onClick={resetForm}
               disabled={busy}
-              className="rounded-lg border border-white/20 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-emerald-400 hover:text-white disabled:cursor-not-allowed disabled:border-white/10 disabled:text-slate-500"
+            className="rounded-lg border border-white/20 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-[#5c7cfa] hover:text-white disabled:cursor-not-allowed disabled:border-white/10 disabled:text-slate-500"
             >
               Reset stakes
             </button>
@@ -328,7 +328,7 @@ export default function Lucky6Page() {
                         {bet.completionPosition ? ` - Completed on draw ${bet.completionPosition}` : ""}
                       </div>
                     </div>
-                    <div className={`font-semibold ${bet.win ? "text-emerald-300" : "text-slate-500"}`}>
+                    <div className={`font-semibold ${bet.win ? "text-[#8db6ff]" : "text-slate-500"}`}>
                       {bet.win ? `Won ${usd.format(bet.payout)}` : "Lost"}
                     </div>
                   </div>

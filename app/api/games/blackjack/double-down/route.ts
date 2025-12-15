@@ -12,7 +12,7 @@ import {
   summarizeState,
 } from "../helpers";
 
-const hitSchema = z.object({
+const doubleSchema = z.object({
   gameId: z.string().min(1),
 });
 
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const parsed = hitSchema.safeParse(body);
+  const parsed = doubleSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
@@ -52,10 +52,16 @@ export async function POST(req: Request) {
       });
 
       if (!game) {
-        return { type: "error" as const, response: NextResponse.json({ error: "Game not found" }, { status: 404 }) };
+        return {
+          type: "error" as const,
+          response: NextResponse.json({ error: "Game not found" }, { status: 404 }),
+        };
       }
       if (game.userId !== session.user.id) {
-        return { type: "error" as const, response: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
+        return {
+          type: "error" as const,
+          response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+        };
       }
       if (game.status !== "player") {
         return {
@@ -67,56 +73,118 @@ export async function POST(req: Request) {
         };
       }
 
-      const state = cloneStateFromRecord(game);
-      const hit = playerHit(state);
-      let nextState = hit.state;
-      let status: "player" | "finished" = "player";
-      const activeIdx = nextState.activeHand;
-      const currentActions = nextState.playerActions[activeIdx] ?? [];
-      const currentEval = evaluateHand(nextState.playerHands[activeIdx]);
-      const currentComplete =
-        currentEval.bust || currentActions.includes("stand") || currentActions.includes("double");
-      if (!currentComplete) {
-        nextState.activeHand = activeIdx;
-      } else {
-        const next = nextIncompleteHand(nextState.playerHands, nextState.playerActions, activeIdx + 1);
-        if (next !== -1) nextState.activeHand = next;
-      }
-
-      const allHandsDone = nextIncompleteHand(nextState.playerHands, nextState.playerActions, 0) === -1;
-
-      if (allHandsDone) {
-        const dealerTurn = dealerPlay(nextState);
-        nextState = dealerTurn.state;
-        status = "finished";
-      }
-
-      const updatedGame = await tx.blackjackGame.update({
-        where: { id: game.id },
-        data: {
-          ...serializeStateForUpdate(nextState),
-          status,
-        },
+      const wallet = await tx.wallet.findUnique({
+        where: { id: game.walletId },
       });
-
-      if (status === "finished") {
-        const resolution = determineRoundResult(nextState.playerHands, nextState.dealerHand, nextState.handBets);
-        const wallet = await resolveBlackjackGame(tx, updatedGame, resolution, nextState.handBets);
+      if (!wallet) {
         return {
-          type: "finished" as const,
-          bet: Number(updatedGame.bet) / 100,
-          state: nextState,
-          resolution,
-          wallet,
+          type: "error" as const,
+          response: NextResponse.json({ error: "Wallet not found" }, { status: 404 }),
         };
       }
 
-      return {
-        type: "player" as const,
-        state: nextState,
-        gameId: game.id,
-        bet: Number(game.bet) / 100,
-      };
+      const state = cloneStateFromRecord(game);
+      const handIndex = state.activeHand;
+      const hand = state.playerHands[handIndex];
+      const handActions = state.playerActions[handIndex] ?? [];
+      if (
+        hand.length !== 2 ||
+        handActions.includes("hit") ||
+        handActions.includes("double")
+      ) {
+        return {
+          type: "error" as const,
+          response: NextResponse.json(
+            { error: "Double down is only available on the initial hand" },
+            { status: 400 }
+          ),
+        };
+      }
+
+      const additionalBet = BigInt(Math.round(state.handBets[handIndex] ?? Number(game.bet)));
+      if (wallet.balance < additionalBet) {
+        return {
+          type: "error" as const,
+          response: NextResponse.json({ error: "Insufficient balance to double down" }, { status: 400 }),
+        };
+      }
+
+      await tx.wallet.update({
+        where: { id: wallet.id },
+        data: {
+          balance: { decrement: additionalBet },
+          held: { increment: additionalBet },
+        },
+      });
+
+      await tx.ledgerEntry.create({
+        data: {
+          walletId: wallet.id,
+          amount: -additionalBet,
+          kind: "blackjack_bet",
+          refId: game.id,
+        },
+      });
+
+      const hit = playerHit(state);
+      let nextState = hit.state;
+      const actions = nextState.playerActions[handIndex] ?? [];
+      if (actions.length > 0) {
+        actions[actions.length - 1] = "double";
+      } else {
+        actions.push("double");
+      }
+      if (!actions.includes("stand")) {
+        actions.push("stand");
+      }
+      nextState.playerActions[handIndex] = actions;
+
+      const remainingIndex = nextIncompleteHand(nextState.playerHands, nextState.playerActions, handIndex + 1);
+      if (remainingIndex !== -1) {
+        nextState.activeHand = remainingIndex;
+      }
+
+      // update bets
+      const updatedHandBets = nextState.handBets.slice();
+      updatedHandBets[handIndex] = (updatedHandBets[handIndex] ?? 0) * 2;
+      nextState.handBets = updatedHandBets;
+
+      if (remainingIndex === -1) {
+        const dealerTurn = dealerPlay(nextState);
+        nextState = dealerTurn.state;
+      }
+
+      const resolution = remainingIndex === -1
+        ? determineRoundResult(nextState.playerHands, nextState.dealerHand, nextState.handBets)
+        : null;
+      const updatedGame = await tx.blackjackGame.update({
+        where: { id: game.id },
+        data: {
+          bet: game.bet + additionalBet,
+          ...serializeStateForUpdate(nextState),
+          status: resolution ? "finished" : "player",
+        },
+      });
+
+      let finalWallet = null;
+      if (resolution) {
+        finalWallet = await resolveBlackjackGame(tx, updatedGame, resolution, nextState.handBets);
+      }
+
+      return resolution
+        ? {
+            type: "finished" as const,
+            bet: Number(updatedGame.bet) / 100,
+            state: nextState,
+            resolution,
+            wallet: finalWallet!,
+          }
+        : {
+            type: "player" as const,
+            bet: Number(updatedGame.bet) / 100,
+            state: nextState,
+            gameId: updatedGame.id,
+          };
     });
 
     if (result.type === "error") {
@@ -148,13 +216,12 @@ export async function POST(req: Request) {
     }
 
     const summary = summarizeState(result.state, false);
-
     return NextResponse.json({
       ok: true,
       state: "player",
       dealerRevealed: false,
-      gameId: result.gameId,
       bet: result.bet,
+      gameId: result.gameId,
       handBets: result.state.handBets.map((b) => b / 100),
       playerHands: result.state.playerHands,
       dealerHand: result.state.dealerHand,
@@ -168,10 +235,10 @@ export async function POST(req: Request) {
       playerBlackjacks: summary.playerBlackjacks,
       dealerBlackjack: summary.dealerBlackjack,
     });
-  } catch (err: unknown) {
+  } catch (err) {
     console.error(err);
     return NextResponse.json(
-      { error: "Failed to draw a card" },
+      { error: "Failed to double down" },
       { status: 500 }
     );
   }

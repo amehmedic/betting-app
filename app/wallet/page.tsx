@@ -157,7 +157,7 @@ export default function WalletPage() {
                   type="button"
                   onClick={() => deposit(amountOption)}
                   disabled={depositing}
-                  className="rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-emerald-400 hover:text-white disabled:cursor-not-allowed disabled:border-white/10 disabled:text-slate-500"
+                  className="rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-[#c5305f] hover:text-white disabled:cursor-not-allowed disabled:border-white/10 disabled:text-slate-500"
                 >
                   Add {amountOption.toFixed(2)} USD
                 </button>
@@ -187,13 +187,13 @@ export default function WalletPage() {
                 step={0.01}
                 value={customAmount}
                 onChange={(e) => setCustomAmount(e.target.value)}
-                className="w-full rounded border border-white/20 bg-slate-900/60 px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 sm:max-w-[160px]"
+                className="w-full rounded border border-white/20 bg-slate-900/60 px-3 py-2 text-sm text-white focus:border-[#5c7cfa] focus:outline-none focus:ring-2 focus:ring-[#5c7cfa]/30 sm:max-w-[160px]"
               />
             </div>
             <button
               type="submit"
               disabled={depositing || !customAmountValid}
-              className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-500/50"
+              className="rounded-lg bg-[#c5305f] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#a61a42] disabled:cursor-not-allowed disabled:bg-[#c5305f]/50"
             >
               {depositing ? "Depositing..." : "Add custom amount"}
             </button>
@@ -237,7 +237,7 @@ export default function WalletPage() {
                 step={0.01}
                 value={customWithdrawAmount}
                 onChange={(e) => setCustomWithdrawAmount(e.target.value)}
-                className="w-full rounded border border-white/20 bg-slate-900/60 px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 sm:max-w-[160px]"
+                className="w-full rounded border border-white/20 bg-slate-900/60 px-3 py-2 text-sm text-white focus:border-[#5c7cfa] focus:outline-none focus:ring-2 focus:ring-[#5c7cfa]/30 sm:max-w-[160px]"
               />
             </div>
             <button
@@ -248,7 +248,7 @@ export default function WalletPage() {
                 parsedCustomWithdrawAmount < 1 ||
                 parsedCustomWithdrawAmount > balanceDollars
               }
-              className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-500/50"
+              className="rounded-lg bg-[#c5305f] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#a61a42] disabled:cursor-not-allowed disabled:bg-[#c5305f]/50"
             >
               {withdrawing ? "Withdrawing..." : "Withdraw"}
             </button>
@@ -307,19 +307,19 @@ export default function WalletPage() {
       ) : wallet ? (
         <div className="space-y-6">
           <div className="flex flex-col gap-4 lg:flex-row">
-            <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-5 shadow-lg shadow-black/20 lg:flex-[2]">
+            <div className="rounded-2xl border border-white/10 bg-[#0b0614] p-5 shadow-lg shadow-[#2b1230]/30 lg:flex-[2]">
               <p className="text-2xl font-semibold text-white">Wallet</p>
               <p className="mt-1 text-sm text-slate-400">
                 Review your bankroll and transaction history at a glance.
               </p>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-5 text-right shadow-lg shadow-emerald-500/10 lg:flex-1">
+            <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-5 text-right shadow-lg shadow-[#c5305f]/15 lg:flex-1">
               <p className="text-xs uppercase tracking-wide text-slate-400">Available balance</p>
-              <p className="mt-2 text-3xl font-semibold text-emerald-300">{fmt(wallet.balance)} USD</p>
+              <p className="mt-2 text-3xl font-semibold text-[#8db6ff]">{fmt(wallet.balance)} USD</p>
             </div>
             <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-5 text-right lg:flex-1">
               <p className="text-xs uppercase tracking-wide text-slate-400">Held balance</p>
-              <p className="mt-2 text-base font-semibold text-slate-200">{fmt(wallet.held)} USD</p>
+              <p className="mt-2 text-base font-semibold text-[#f5aac5]">{fmt(wallet.held)} USD</p>
             </div>
           </div>
 
@@ -333,7 +333,7 @@ export default function WalletPage() {
                   className={clsx(
                     "flex-1 rounded-2xl border px-4 py-3 text-left transition lg:flex-none",
                     activePanel === panel.id
-                      ? "border-emerald-500/60 bg-slate-900 text-white shadow-lg shadow-emerald-500/15"
+                      ? "border-[#c5305f]/70 bg-[#1a0d18] text-white shadow-lg shadow-[#c5305f]/25"
                       : "border-white/10 bg-slate-950/60 text-slate-300 hover:text-white"
                   )}
                 >

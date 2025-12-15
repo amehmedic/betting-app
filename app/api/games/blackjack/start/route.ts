@@ -6,12 +6,13 @@ import { z } from "zod";
 import {
   createInitialState,
   evaluateHand,
-  determineResult,
+  determineRoundResult,
 } from "@/lib/blackjack";
 import {
   resolveBlackjackGame,
   serializeStateForUpdate,
   serializeWallet,
+  summarizeState,
 } from "../helpers";
 
 const startSchema = z.object({
@@ -59,14 +60,14 @@ export async function POST(req: Request) {
     );
   }
 
-  const state = createInitialState();
-  const playerEval = evaluateHand(state.playerHand);
+  const state = createInitialState(Number(bet));
+  const playerEval = evaluateHand(state.playerHands[0]);
   const dealerEval = evaluateHand(state.dealerHand);
   const autoResolve = playerEval.blackjack || dealerEval.blackjack;
 
   if (autoResolve) {
-    if (playerEval.blackjack && !state.playerActions.includes("stand")) {
-      state.playerActions.push("stand");
+    if (playerEval.blackjack && !state.playerActions[0]?.includes("stand")) {
+      state.playerActions[0]?.push("stand");
     }
     if (!state.dealerActions.includes("stand")) {
       state.dealerActions.push("stand");
@@ -103,11 +104,8 @@ export async function POST(req: Request) {
       });
 
       if (autoResolve) {
-        const resolution = determineResult(
-          state.playerHand,
-          state.dealerHand
-        );
-        const finalWallet = await resolveBlackjackGame(tx, game, resolution);
+        const resolution = determineRoundResult(state.playerHands, state.dealerHand, state.handBets);
+        const finalWallet = await resolveBlackjackGame(tx, game, resolution, state.handBets);
         return {
           type: "finished" as const,
           wallet: finalWallet,
@@ -125,30 +123,30 @@ export async function POST(req: Request) {
     });
 
     if (result.type === "finished") {
+      const summary = summarizeState(result.state, true);
       return NextResponse.json({
         ok: true,
         state: "finished",
         dealerRevealed: true,
         bet: Number(bet) / 100,
-        playerHand: result.state.playerHand,
+        handBets: result.state.handBets.map((b) => b / 100),
+        playerHands: result.state.playerHands,
         dealerHand: result.state.dealerHand,
-        playerTotal: result.resolution.playerTotal,
-        dealerTotal: result.resolution.dealerTotal,
-        playerBust: result.resolution.playerBust,
-        dealerBust: result.resolution.dealerBust,
-        playerBlackjack: result.resolution.playerBlackjack,
-        dealerBlackjack: result.resolution.dealerBlackjack,
         playerActions: result.state.playerActions,
         dealerActions: result.state.dealerActions,
-        result: result.resolution.result,
+        playerTotals: summary.playerTotals,
+        dealerTotal: summary.dealerTotal,
+        playerBusts: summary.playerBusts,
+        dealerBust: summary.dealerBust,
+        playerBlackjacks: summary.playerBlackjacks,
+        dealerBlackjack: summary.dealerBlackjack,
+        handResults: summary.handResults?.map((r) => r.result),
+        result: summary.overallResult,
         wallet: serializeWallet(result.wallet),
       });
     }
 
-    const currentEval = determineResult(
-      result.state.playerHand,
-      result.state.dealerHand
-    );
+    const summary = summarizeState(result.state, false);
 
     return NextResponse.json({
       ok: true,
@@ -156,14 +154,16 @@ export async function POST(req: Request) {
       dealerRevealed: false,
       gameId: result.game.id,
       bet: Number(bet) / 100,
-      playerHand: result.state.playerHand,
+      handBets: result.state.handBets.map((b) => b / 100),
+      playerHands: result.state.playerHands,
       dealerHand: result.state.dealerHand,
-      playerTotal: currentEval.playerTotal,
-      dealerTotal: currentEval.dealerTotal,
-      playerBust: currentEval.playerBust,
-      dealerBust: currentEval.dealerBust,
-      playerBlackjack: currentEval.playerBlackjack,
-      dealerBlackjack: currentEval.dealerBlackjack,
+      activeHand: result.state.activeHand,
+      playerTotals: summary.playerTotals,
+      dealerTotal: summary.dealerTotal,
+      playerBusts: summary.playerBusts,
+      dealerBust: summary.dealerBust,
+      playerBlackjacks: summary.playerBlackjacks,
+      dealerBlackjack: summary.dealerBlackjack,
       playerActions: result.state.playerActions,
       dealerActions: result.state.dealerActions,
       wallet: serializeWallet(result.wallet),
