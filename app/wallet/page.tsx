@@ -317,9 +317,9 @@ export default function WalletPage() {
               <p className="text-xs uppercase tracking-wide text-slate-400">Available balance</p>
               <p className="mt-2 text-3xl font-semibold text-[#8db6ff]">{fmt(wallet.balance)} USD</p>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-5 text-right lg:flex-1">
+            <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-5 text-right shadow-lg shadow-[#c5305f]/15 lg:flex-1">
               <p className="text-xs uppercase tracking-wide text-slate-400">Held balance</p>
-              <p className="mt-2 text-base font-semibold text-[#f5aac5]">{fmt(wallet.held)} USD</p>
+              <p className="mt-2 text-3xl font-semibold text-[#f5aac5]">{fmt(wallet.held)} USD</p>
             </div>
           </div>
 

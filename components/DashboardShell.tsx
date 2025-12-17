@@ -15,6 +15,7 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { href: "/coin", label: "Coin Flip" },
   { href: "/blackjack", label: "Blackjack" },
+  { href: "/roulette", label: "Roulette" },
   { href: "/lucky6", label: "Lucky 6" },
 ];
 
@@ -24,17 +25,39 @@ export default function DashboardShell({
   title,
   description,
   children,
+  username,
 }: {
   title: string;
   description?: string;
   children: ReactNode;
+  username?: string | null;
 }) {
   const pathname = usePathname();
   const [summary, setSummary] = useState<{ balance: number; held: number } | null>(null);
-  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [navUsername, setNavUsername] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     let active = true;
+
+    setHydrated(true);
+
+    try {
+      const raw = window.localStorage.getItem("dashboard:summary");
+      if (raw) {
+        const cached = JSON.parse(raw) as { balance: number; held: number };
+        setSummary(cached);
+      }
+    } catch {
+      /* ignore */
+    }
+    try {
+      const cachedUser = window.localStorage.getItem("dashboard:username");
+      if (cachedUser) setNavUsername(cachedUser);
+    } catch {
+      /* ignore */
+    }
 
     async function fetchSummary() {
       setSummaryLoading(true);
@@ -45,7 +68,13 @@ export default function DashboardShell({
           const json = await res.json();
           const balance = Number(json?.wallet?.balance ?? 0) / 100;
           const held = Number(json?.wallet?.held ?? 0) / 100;
-          setSummary({ balance, held });
+          const next = { balance, held };
+          setSummary(next);
+          try {
+            window.localStorage.setItem("dashboard:summary", JSON.stringify(next));
+          } catch {
+            /* ignore */
+          }
         }
       } catch (err) {
         console.error(err);
@@ -55,6 +84,37 @@ export default function DashboardShell({
     }
 
     fetchSummary();
+    async function fetchProfile() {
+      try {
+        const res = await fetch("/api/profile", { cache: "no-store" });
+        if (!active || !res.ok) return;
+        const json = await res.json().catch(() => null);
+        if (json?.ok && json.user) {
+          const name = json.user.username ?? json.user.email ?? null;
+          if (name) {
+            setNavUsername(name as string);
+            try {
+              window.localStorage.setItem("dashboard:username", name as string);
+            } catch {
+              /* ignore */
+            }
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    if (username) {
+      setNavUsername(username);
+      try {
+        window.localStorage.setItem("dashboard:username", username);
+      } catch {
+        /* ignore */
+      }
+    } else {
+      fetchProfile();
+    }
 
     function refreshListener() {
       fetchSummary();
@@ -108,20 +168,41 @@ export default function DashboardShell({
               })}
             </nav>
           </div>
-          <div className="flex flex-1 items-center justify-end gap-5 text-sm font-semibold uppercase tracking-wide text-slate-100">
+          <div className="flex flex-1 items-center justify-end gap-3 text-sm font-medium tracking-wide text-slate-100">
             <Link
               href="/wallet"
-              className="flex items-center gap-4 rounded-full border border-[#5c7cfa]/30 px-4 py-1.5 text-base text-white shadow-inner shadow-[#5c7cfa]/25 transition hover:border-[#7c91ff] hover:text-[#cdd8ff]"
+              className={clsx(
+                "flex items-center gap-3 rounded-full px-4 py-2 text-sm font-medium text-white transition shadow-inner shadow-[#5c7cfa]/20",
+                pathname.startsWith("/wallet")
+                  ? "border border-[#7c91ff] text-[#cdd8ff]"
+                  : "border border-[#5c7cfa]/40 hover:border-[#7c91ff] hover:text-[#cdd8ff]"
+              )}
               title="View wallet details"
             >
               <span>Balance</span>
               <span className="font-mono">
-                {summary ? usd.format(summary.balance) : summaryLoading ? "..." : usd.format(0)}
+                {hydrated && summary
+                  ? usd.format(summary.balance)
+                  : summaryLoading
+                  ? "..."
+                  : usd.format(0)}
               </span>
+            </Link>
+            <Link
+              href="/profile"
+              className={clsx(
+                "rounded-full px-4 py-2 text-sm font-medium text-white transition",
+                pathname.startsWith("/profile")
+                  ? "border border-[#5c7cfa] text-[#cdd8ff]"
+                  : "border border-white/20 hover:border-[#5c7cfa] hover:text-[#cdd8ff]"
+              )}
+              title="View profile"
+            >
+              {hydrated && navUsername ? navUsername : "Profile"}
             </Link>
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="rounded-xl border border-[#c5305f]/60 px-5 py-2 text-sm font-semibold tracking-wide text-white transition hover:bg-[#c5305f]/20"
+              className="rounded-full border border-[#c5305f]/60 px-4 py-2 text-sm font-medium text-white transition hover:bg-[#c5305f]/15"
             >
               Logout
             </button>

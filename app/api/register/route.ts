@@ -6,21 +6,35 @@ import { z } from "zod";
 const schema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
+  username: z.string().min(3).max(32).optional(),
+  avatarUrl: z.string().url().optional(),
 });
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { email, password } = schema.parse(body);
+    const { email, password, username, avatarUrl } = schema.parse(body);
 
     const exists = await prisma.user.findUnique({ where: { email } });
     if (exists) return NextResponse.json({ error: "Email already in use" }, { status: 400 });
+
+    let finalUsername = username ?? email.split("@")[0];
+    if (finalUsername.length < 3) {
+      finalUsername = `${finalUsername}${Math.floor(Math.random() * 1000)}`;
+    }
+    // ensure unique username
+    const existingUserName = await prisma.user.findUnique({ where: { username: finalUsername } });
+    if (existingUserName) {
+      finalUsername = `${finalUsername}-${Math.floor(Math.random() * 9999)}`;
+    }
 
     const passwordHash = await hash(password);
     const user = await prisma.user.create({
       data: {
         email,
         passwordHash,
+        username: finalUsername,
+        avatarUrl,
         wallets: {
           create: [{ currency: "PLAY", balance: BigInt(10_000), held: BigInt(0) }], // give starter play credits
         },

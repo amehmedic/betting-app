@@ -19,7 +19,15 @@ export const authConfig: NextAuthOptions = {
         const user = await prisma.user.findUnique({ where: { email: creds.email } });
         if (!user) return null;
         const ok = await verify(user.passwordHash, creds.password);
-        return ok ? { id: user.id, email: user.email, role: user.role } : null; // <-- includes id, role
+        return ok
+          ? {
+              id: user.id,
+              email: user.email,
+              role: user.role,
+              username: (user as any).username,
+              avatarUrl: (user as any).avatarUrl,
+            }
+          : null; // <-- includes id, role
       },
     }),
   ],
@@ -32,6 +40,8 @@ export const authConfig: NextAuthOptions = {
       if (user) {
         token.id = (user as any).id;
         token.role = (user as any).role;
+        token.username = (user as any).username;
+        token.avatarUrl = (user as any).avatarUrl;
       }
       return token;
     },
@@ -39,6 +49,8 @@ export const authConfig: NextAuthOptions = {
       if (session.user) {
         (session.user as any).id = token.id as string;
         (session.user as any).role = token.role as string | undefined;
+        (session.user as any).username = token.username as string | undefined;
+        (session.user as any).avatarUrl = token.avatarUrl as string | undefined;
       }
       return session;
     },
