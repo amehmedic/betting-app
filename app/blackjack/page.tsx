@@ -494,15 +494,12 @@ export default function BlackjackPage() {
       <div className="mx-auto max-w-5xl space-y-8 text-center">
         <div>
           <h1 className="text-3xl font-semibold text-white">Blackjack</h1>
-          <p className="mt-1 text-sm text-slate-300">
-            Deal a hand, play it out in real time, and settle automatically when the dealer stands.
-          </p>
         </div>
 
         <section className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-6 text-left shadow-xl shadow-black/30">
           <div className="flex flex-col items-center gap-4 text-center">
             <div className="flex flex-col items-center gap-2">
-              <label className="text-xs uppercase tracking-wide text-slate-400">Bet (USD)</label>
+              <label className="text-xs uppercase tracking-wide text-slate-400">Bet amount (USD)</label>
               <input
                 type="number"
                 min={0.01}
@@ -523,7 +520,7 @@ export default function BlackjackPage() {
                 disabled={!canDeal || !amountValid}
                 className="w-full rounded-xl bg-[#c5305f] px-6 py-3 text-lg font-semibold text-white transition hover:bg-[#a61a42] disabled:cursor-not-allowed disabled:bg-[#c5305f]/50"
               >
-                {busy && game.phase !== "player" ? "Dealing..." : "Deal"}
+                {busy && game.phase !== "player" ? "Dealing..." : "Deal cards"}
               </button>
               {game.phase === "player" && (
                 <>

@@ -15,7 +15,15 @@ import {
 export const runtime = "nodejs";
 
 const betSchema = z.object({
-  type: z.enum(["first-parity", "first-high-low", "color-six"]),
+  type: z.enum([
+    "first-parity",
+    "first-high-low",
+    "first-five-sum",
+    "first-five-parity",
+    "first-color",
+    "combo-six",
+    "color-six",
+  ]),
   pick: z.string(),
   amount: z.number().positive().max(1_000_000),
 });
@@ -39,10 +47,34 @@ type NormalizedBet =
       type: "color-six";
       pick: Lucky6Color;
       amount: number;
+    }
+  | {
+      type: "first-five-sum";
+      pick: "over" | "under";
+      amount: number;
+    }
+  | {
+      type: "first-five-parity";
+      pick: "even" | "odd";
+      amount: number;
+    }
+  | {
+      type: "first-color";
+      pick: Lucky6Color;
+      amount: number;
+    }
+  | {
+      type: "combo-six";
+      pick: number[];
+      amount: number;
     };
 
 const PARITY_MULTIPLIER = 1.8;
 const HIGH_LOW_MULTIPLIER = 1.8;
+const FIRST_FIVE_SUM_MULTIPLIER = 1.8;
+const FIRST_FIVE_PARITY_MULTIPLIER = 1.8;
+const FIRST_COLOR_MULTIPLIER = 8; // 1 in 8 colors, fair-ish
+const COMBO_SIX_MULTIPLIER = 50; // placeholder generous payout
 
 export async function POST(req: Request) {
   const session = await getServerSession(authConfig);
@@ -71,6 +103,34 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Invalid high/low pick" }, { status: 400 });
       }
       normalized.push({ type: "first-high-low", pick, amount: bet.amount });
+    } else if (bet.type === "first-five-sum") {
+      const pick = bet.pick.toLowerCase();
+      if (pick !== "over" && pick !== "under") {
+        return NextResponse.json({ error: "Invalid sum pick" }, { status: 400 });
+      }
+      normalized.push({ type: "first-five-sum", pick, amount: bet.amount });
+    } else if (bet.type === "first-five-parity") {
+      const pick = bet.pick.toLowerCase();
+      if (pick !== "even" && pick !== "odd") {
+        return NextResponse.json({ error: "Invalid first five parity pick" }, { status: 400 });
+      }
+      normalized.push({ type: "first-five-parity", pick, amount: bet.amount });
+    } else if (bet.type === "first-color") {
+      const pick = bet.pick.toLowerCase() as Lucky6Color;
+      if (!LUCKY6_COLORS.includes(pick)) {
+        return NextResponse.json({ error: "Invalid first color pick" }, { status: 400 });
+      }
+      normalized.push({ type: "first-color", pick, amount: bet.amount });
+    } else if (bet.type === "combo-six") {
+      const picks = bet.pick
+        .split(",")
+        .map((p) => Number.parseInt(p.trim(), 10))
+        .filter((n) => Number.isFinite(n));
+      const uniq = Array.from(new Set(picks)).filter((n) => n >= 1 && n <= 48);
+      if (uniq.length !== 6) {
+        return NextResponse.json({ error: "Combo bet must have 6 unique numbers between 1 and 48" }, { status: 400 });
+      }
+      normalized.push({ type: "combo-six", pick: uniq, amount: bet.amount });
     } else if (bet.type === "color-six") {
       const pick = bet.pick.toLowerCase() as Lucky6Color;
       if (!LUCKY6_COLORS.includes(pick)) {
@@ -107,6 +167,9 @@ export async function POST(req: Request) {
 
   const draw = runLucky6Draw();
   const firstBall = draw.balls[0];
+  const firstFive = draw.balls.slice(0, 5);
+  const firstFiveSum = firstFive.reduce((sum, b) => sum + b.number, 0);
+  const firstFiveEven = firstFive.filter((b) => isEven(b.number)).length;
 
   const betResults = normalized.map((bet, idx) => {
     const stakeCents = stakes[idx];
@@ -122,6 +185,22 @@ export async function POST(req: Request) {
       const high = isHigh(firstBall.number);
       win = bet.pick === "high" ? high : !high;
       multiplier = win ? HIGH_LOW_MULTIPLIER : 0;
+    } else if (bet.type === "first-five-sum") {
+      win = bet.pick === "over" ? firstFiveSum > 122.5 : firstFiveSum < 122.5;
+      multiplier = win ? FIRST_FIVE_SUM_MULTIPLIER : 0;
+    } else if (bet.type === "first-five-parity") {
+      const odd = firstFive.length - firstFiveEven;
+      const moreEven = firstFiveEven > odd;
+      const moreOdd = odd > firstFiveEven;
+      win = bet.pick === "even" ? moreEven : moreOdd;
+      multiplier = win ? FIRST_FIVE_PARITY_MULTIPLIER : 0;
+    } else if (bet.type === "first-color") {
+      win = firstBall.color === bet.pick;
+      multiplier = win ? FIRST_COLOR_MULTIPLIER : 0;
+    } else if (bet.type === "combo-six") {
+      const drawnNumbers = new Set(draw.balls.map((b) => b.number));
+      win = bet.pick.every((n) => drawnNumbers.has(n));
+      multiplier = win ? COMBO_SIX_MULTIPLIER : 0;
     } else {
       position = draw.completionOrder[bet.pick] ?? null;
       multiplier = position ? colorPayoutForPosition(position) ?? 0 : 0;
@@ -187,7 +266,7 @@ export async function POST(req: Request) {
     },
     bets: betResults.map((bet) => ({
       type: bet.type,
-      pick: bet.pick,
+      pick: Array.isArray(bet.pick) ? (bet.pick as number[]).join(",") : (bet.pick as string),
       amount: bet.amount,
       win: bet.win,
       multiplier: bet.multiplier,

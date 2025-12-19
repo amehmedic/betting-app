@@ -118,9 +118,6 @@ export default function CoinPage() {
         <div className="mx-auto max-w-4xl space-y-8 text-center">
           <div>
             <h1 className="text-3xl font-semibold text-white">Coin Flip</h1>
-            <p className="mt-1 text-sm text-slate-300">
-              Call heads or tails, drop a stake, and the bankroll updates instantly.
-            </p>
           </div>
 
           <div className="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-6 text-center">
@@ -145,7 +142,7 @@ export default function CoinPage() {
               </div>
             </div>
             <div>
-              <label className="text-xs uppercase tracking-wide text-slate-400">Amount (USD)</label>
+              <label className="text-xs uppercase tracking-wide text-slate-400">Bet amount (USD)</label>
               <div className="mt-2 flex flex-col items-center gap-3">
                 <input
                   type="number"
@@ -153,7 +150,7 @@ export default function CoinPage() {
                   step={0.01}
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="w-full rounded border border-white/20 bg-slate-900/60 px-3 py-2 text-sm text-left focus:border-[#5c7cfa] focus:outline-none focus:ring-2 focus:ring-[#5c7cfa]/40 md:w-48"
+                  className="w-32 rounded border border-white/20 bg-slate-900/60 px-3 py-2 text-sm text-left focus:border-[#5c7cfa] focus:outline-none focus:ring-2 focus:ring-[#5c7cfa]/40"
                 />
                 <span className="text-xs text-slate-400">
                   {amountValid ? usd.format(parsedAmount) : "Enter stake"}
@@ -163,7 +160,7 @@ export default function CoinPage() {
             <button
               onClick={flip}
               disabled={busy || !amountValid}
-              className="w-full rounded-xl bg-[#c5305f] px-4 py-3 text-lg font-semibold tracking-wide text-white transition hover:bg-[#a61a42] disabled:cursor-not-allowed disabled:bg-[#c5305f]/50"
+              className="w-full max-w-sm rounded-xl bg-[#c5305f] px-4 py-3 text-lg font-semibold tracking-wide text-white transition hover:bg-[#a61a42] disabled:cursor-not-allowed disabled:bg-[#c5305f]/50"
             >
               {busy ? "Flipping..." : "Flip the coin"}
             </button>
