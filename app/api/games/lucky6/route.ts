@@ -74,7 +74,43 @@ const HIGH_LOW_MULTIPLIER = 1.8;
 const FIRST_FIVE_SUM_MULTIPLIER = 1.8;
 const FIRST_FIVE_PARITY_MULTIPLIER = 1.8;
 const FIRST_COLOR_MULTIPLIER = 8; // 1 in 8 colors, fair-ish
-const COMBO_SIX_MULTIPLIER = 50; // placeholder generous payout
+const COMBO_COMPLETION_PAYOUTS: Record<number, number> = {
+  6: 10000,
+  7: 7500,
+  8: 5000,
+  9: 2500,
+  10: 1000,
+  11: 500,
+  12: 300,
+  13: 200,
+  14: 150,
+  15: 100,
+  16: 80,
+  17: 60,
+  18: 40,
+  19: 30,
+  20: 25,
+  21: 20,
+  22: 18,
+  23: 16,
+  24: 14,
+  25: 12,
+  26: 10,
+  27: 9,
+  28: 8,
+  29: 7,
+  30: 6,
+  31: 5,
+  32: 4,
+  33: 3,
+  34: 2,
+  35: 1,
+};
+
+function comboPayoutForPosition(position: number | null): number {
+  if (!position) return 0;
+  return COMBO_COMPLETION_PAYOUTS[position] ?? 0;
+}
 
 export async function POST(req: Request) {
   const session = await getServerSession(authConfig);
@@ -171,6 +207,8 @@ export async function POST(req: Request) {
   const firstFiveSum = firstFive.reduce((sum, b) => sum + b.number, 0);
   const firstFiveEven = firstFive.filter((b) => isEven(b.number)).length;
 
+  const drawIndexByNumber = new Map(draw.balls.map((ball, index) => [ball.number, index + 1]));
+
   const betResults = normalized.map((bet, idx) => {
     const stakeCents = stakes[idx];
     let win = false;
@@ -198,9 +236,16 @@ export async function POST(req: Request) {
       win = firstBall.color === bet.pick;
       multiplier = win ? FIRST_COLOR_MULTIPLIER : 0;
     } else if (bet.type === "combo-six") {
-      const drawnNumbers = new Set(draw.balls.map((b) => b.number));
-      win = bet.pick.every((n) => drawnNumbers.has(n));
-      multiplier = win ? COMBO_SIX_MULTIPLIER : 0;
+      const positions = bet.pick
+        .map((n) => drawIndexByNumber.get(n))
+        .filter((p): p is number => typeof p === "number");
+      win = positions.length === 6;
+      if (win) {
+        position = Math.max(...positions);
+        multiplier = comboPayoutForPosition(position);
+      } else {
+        multiplier = 0;
+      }
     } else {
       position = draw.completionOrder[bet.pick] ?? null;
       multiplier = position ? colorPayoutForPosition(position) ?? 0 : 0;
