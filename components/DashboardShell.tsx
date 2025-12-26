@@ -14,6 +14,7 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/coin", label: "Coin Flip" },
+  { href: "/slots", label: "Slots" },
   { href: "/blackjack", label: "Blackjack" },
   { href: "/roulette", label: "Roulette" },
   { href: "/lucky6", label: "Lucky 6" },

@@ -1,5 +1,5 @@
 ﻿"use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import DashboardShell from "@/components/DashboardShell";
 import clsx from "clsx";
 import {
@@ -104,7 +104,6 @@ const colorMeta: Record<
   purple: { bg: "#7c3aed", ring: "ring-purple-300/40", text: "text-purple-50" },
   orange: { bg: "#f97316", ring: "ring-orange-300/50", text: "text-orange-50" },
   brown: { bg: "#8b5a2b", ring: "ring-amber-400/40", text: "text-amber-50" },
-  pink: { bg: "#ec4899", ring: "ring-pink-300/40", text: "text-rose-50" },
   black: { bg: "#0f172a", ring: "ring-slate-400/40", text: "text-white" },
 };
 
@@ -130,13 +129,9 @@ export default function Lucky6Page() {
   const [revealedCount, setRevealedCount] = useState(0);
   const [isDrawing, setIsDrawing] = useState(false);
   const drawSlots = 35;
+  const pendingWalletUpdate = useRef(false);
 
   const formatQuota = (value: number) => {
-    if (value >= 1000) {
-      const scaled = value / 1000;
-      const label = Number.isInteger(scaled) ? String(scaled) : scaled.toFixed(1);
-      return `${label}k`;
-    }
     return String(value);
   };
 
@@ -144,6 +139,7 @@ export default function Lucky6Page() {
     () => pendingBets.reduce((sum, bet) => sum + (Number.isFinite(bet.amount) ? bet.amount : 0), 0),
     [pendingBets]
   );
+  const hasPendingBets = pendingBets.length > 0;
 
   const stakeValue = parseAmount(stakeAmount);
 
@@ -154,7 +150,7 @@ export default function Lucky6Page() {
     value > 0 ? (
       <span
         className={clsx(
-          "pointer-events-none absolute left-1/2 top-1/2 inline-flex min-w-[32px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-[#c5305f] px-2 py-1 text-[11px] font-semibold text-white shadow-lg shadow-black/40",
+          "pointer-events-none absolute left-1/2 top-1/2 inline-flex min-w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-[#c5305f] px-2 py-1 text-[11px] font-semibold text-white shadow-lg shadow-black/40",
           extra
         )}
       >
@@ -217,6 +213,10 @@ export default function Lucky6Page() {
       if (current >= total) {
         window.clearInterval(interval);
         setIsDrawing(false);
+        if (pendingWalletUpdate.current) {
+          pendingWalletUpdate.current = false;
+          notifyWalletUpdate();
+        }
       }
     }, 450);
 
@@ -283,7 +283,7 @@ export default function Lucky6Page() {
       } else {
         const ok = json as Lucky6Response;
         setLastResult(ok);
-        notifyWalletUpdate();
+        pendingWalletUpdate.current = true;
       }
     } catch (e) {
       console.error(e);
@@ -308,13 +308,23 @@ export default function Lucky6Page() {
     setError(null);
   }
 
+  const drawBalls = lastResult?.draw.balls ?? [];
+  const activeDrawBall =
+    drawBalls.length > 0
+      ? revealedCount < drawBalls.length
+        ? drawBalls[revealedCount]
+        : drawBalls[drawBalls.length - 1]
+      : null;
+  const displayBall = isDrawing ? activeDrawBall : lastResult?.draw.firstBall ?? null;
+  const displayMeta = displayBall ? colorMeta[displayBall.color] : null;
+
   return (
     <DashboardShell title="" description="">
       <div className="mx-auto max-w-6xl space-y-8 text-center">
         <h1 className="text-3xl font-semibold text-white">Lucky 6</h1>
-        <section className="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl shadow-black/30 text-left">
-          <div className="grid gap-6 lg:grid-cols-[1.13fr_1fr]">
-            <div className="space-y-3">
+        <section className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-5 shadow-xl shadow-black/30 text-left">
+          <div className="grid gap-5 lg:grid-cols-[50%_50%]">
+            <div className="space-y-2">
               <div className="flex flex-col items-center gap-2">
                 <label className="text-xs uppercase tracking-wide text-slate-400">Bet amount (USD)</label>
                 <input
@@ -329,8 +339,8 @@ export default function Lucky6Page() {
                   {stakeAmount ? `$${Number(stakeAmount).toFixed(2)}` : "$0.00"}
                 </span>
               </div>
-              <div className="grid gap-2 sm:grid-cols-2">
-                <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4 shadow-inner shadow-black/30 space-y-2 text-center">
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-3 shadow-inner shadow-black/30 space-y-2 text-center">
                   <div className="text-xs uppercase tracking-wide text-slate-400">First ball parity</div>
                   <div className="grid grid-cols-2 gap-2">
                     {parityOptions.map((opt) => (
@@ -349,7 +359,7 @@ export default function Lucky6Page() {
                     ))}
                   </div>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4 shadow-inner shadow-black/30 space-y-2 text-center">
+                <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-3 shadow-inner shadow-black/30 space-y-2 text-center">
                   <div className="text-xs uppercase tracking-wide text-slate-400">First ball value</div>
                   <div className="grid grid-cols-2 gap-2">
                     {highLowOptions.map((opt) => (
@@ -371,7 +381,7 @@ export default function Lucky6Page() {
               </div>
 
               <div className="grid gap-2 sm:grid-cols-2">
-                <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4 shadow-inner shadow-black/30 space-y-2 text-center">
+                <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-3 shadow-inner shadow-black/30 space-y-2 text-center">
                   <div className="text-xs uppercase tracking-wide text-slate-400">First 5 balls parity</div>
                   <div className="grid grid-cols-2 gap-2">
                     {["even", "odd"].map((opt) => (
@@ -390,7 +400,7 @@ export default function Lucky6Page() {
                     ))}
                   </div>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4 shadow-inner shadow-black/30 space-y-2 text-center">
+                <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-3 shadow-inner shadow-black/30 space-y-2 text-center">
                   <div className="text-xs uppercase tracking-wide text-slate-400">Sum of first 5 balls</div>
                   <div className="grid grid-cols-2 gap-2">
                     {["over", "under"].map((opt) => (
@@ -411,8 +421,8 @@ export default function Lucky6Page() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4 shadow-inner shadow-black/30 space-y-3">
-                <div>
+              <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-3 shadow-inner shadow-black/30 space-y-3">
+                <div className="text-center">
                   <div className="text-sm font-semibold text-white">First ball color</div>
                   <div className="text-xs text-slate-400">Pick the color of the first ball.</div>
                 </div>
@@ -443,12 +453,12 @@ export default function Lucky6Page() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4 shadow-inner shadow-black/30 space-y-3">
-                <div>
+              <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-3 shadow-inner shadow-black/30 space-y-3">
+                <div className="text-center">
                   <div className="text-sm font-semibold text-white">Combo builder</div>
                   <div className="text-xs text-slate-400">Select any 6 numbers (max 6).</div>
                 </div>
-                <div className="grid grid-cols-8 gap-2 rounded-xl border border-white/5 bg-slate-950/50 p-3">
+                <div className="grid grid-cols-8 gap-2 rounded-xl border border-white/5 bg-slate-950/50 p-2">
                   {Array.from({ length: 48 }, (_, i) => i + 1).map((num) => {
                     const color = colorForNumber(num);
                     const meta = colorMeta[color];
@@ -505,10 +515,10 @@ export default function Lucky6Page() {
                     );
                   })}
                 </div>
-                <div className="space-y-2 text-left">
+                <div className="space-y-2 text-center">
                   <label className="text-xs uppercase tracking-wide text-slate-400">Selected numbers</label>
                   <div className="flex flex-wrap items-center gap-2">
-                    <div className="flex-1 flex flex-wrap gap-2 rounded-lg border border-white/10 bg-slate-950/40 px-3 py-2 text-sm text-slate-300">
+                    <div className="flex-1 flex flex-wrap justify-center gap-2 rounded-lg border border-white/10 bg-slate-950/40 px-3 py-2 text-sm text-slate-300 text-center">
                       {comboSelection.length === 0 ? (
                         <span className="text-slate-500">Select up to 6 numbers</span>
                       ) : (
@@ -532,6 +542,8 @@ export default function Lucky6Page() {
                           })
                       )}
                     </div>
+                  </div>
+                  <div className="flex justify-center">
                     <button
                       type="button"
                       onClick={addComboBet}
@@ -549,182 +561,179 @@ export default function Lucky6Page() {
                 </div>
               </div>
 
-              <div className="space-y-2 text-center">
-                <div className="text-sm text-slate-300">Total stake: {usd.format(totalStakePreview)}</div>
-                <div className="flex items-center justify-center">
-                  <button
-                    onClick={play}
-                    disabled={busy || isDrawing || pendingBets.length === 0}
-                    className="w-full max-w-sm rounded-xl bg-[#c5305f] px-6 py-3 text-lg font-semibold text-white transition hover:bg-[#a61a42] disabled:cursor-not-allowed disabled:bg-[#c5305f]/50"
-                  >
-                    {isDrawing ? "Round in progress" : busy ? "Playing..." : "Play Lucky 6"}
-                  </button>
-                </div>
-              </div>
-
               {error && <div className="text-sm text-red-400">{error}</div>}
             </div>
 
-            <div className="space-y-4">
-              {lastResult && (
-                <div className="space-y-4 rounded-2xl border border-white/10 bg-slate-900/70 p-4 shadow-xl shadow-black/30">
-                  <div className="flex items-center justify-between text-sm text-slate-300">
-                    <div className="font-semibold text-white">Last draw</div>
-                    {!isDrawing && (
-                      <div>
-                        Stake {usd.format(lastResult.totals.stake)} | Payout {usd.format(lastResult.totals.payout)} |{" "}
-                        <span
-                          className={clsx(
-                            "font-semibold",
-                            lastResult.totals.payout - lastResult.totals.stake > 0
-                              ? "text-emerald-400"
-                              : lastResult.totals.payout - lastResult.totals.stake < 0
-                              ? "text-rose-400"
-                              : "text-white"
-                          )}
-                        >
-                          Win/Loss{" "}
-                          {formatSignedUsd(lastResult.totals.payout - lastResult.totals.stake)}
-                        </span>
+            <div className="flex w-full flex-col gap-4 pr-5 h-full">
+              <div className="flex flex-col gap-4 flex-[0_0_52%] min-h-0">
+                <div className="w-full h-full flex flex-col gap-4 rounded-2xl border border-white/10 bg-slate-900/70 p-4 shadow-xl shadow-black/30">
+                <div className="flex flex-1 flex-col items-center justify-center gap-4">
+                  <div className="tumbler">
+                    <div className={clsx("tumbler__ring", !isDrawing && "tumbler__ring--still")} />
+                    {displayBall && displayMeta && (
+                      <div
+                        key={`draw-${displayBall.number}-${displayBall.color}`}
+                        className={clsx("tumbler__ball", "ring-1", displayMeta.ring)}
+                        style={{ backgroundColor: displayMeta.bg }}
+                        title={`Drawing ${displayBall.number} (${displayBall.color})`}
+                      >
+                        <span className="ball__number">{displayBall.number}</span>
                       </div>
                     )}
                   </div>
-                  <div className="flex flex-col items-center gap-4">
-                    {isDrawing &&
-                      (() => {
-                        const nextBall =
-                          revealedCount < lastResult.draw.balls.length
-                            ? lastResult.draw.balls[revealedCount]
-                            : lastResult.draw.balls[lastResult.draw.balls.length - 1];
-                        const nextMeta = nextBall ? colorMeta[nextBall.color] : null;
+                  <div className="grid w-full max-w-none grid-cols-5 justify-items-center gap-x-6 gap-y-2">
+                    {Array.from({ length: drawSlots }, (_, slotIdx) => {
+                      const ball = slotIdx < revealedCount ? drawBalls[slotIdx] : null;
+                      const completionPosition = slotIdx + 1;
+                      const quotaIndex = completionPosition - 6;
+                      const quota =
+                        quotaIndex >= 0 && quotaIndex < comboCompletionPayouts.length
+                          ? comboCompletionPayouts[quotaIndex]
+                          : null;
+                      if (!ball) {
                         return (
-                          <div className="tumbler">
-                            <div className={clsx("tumbler__ring", !isDrawing && "tumbler__ring--still")} />
-                            {nextBall && nextMeta && (
-                              <div
-                                key={`draw-${revealedCount}-${nextBall.number}`}
-                                className={clsx("tumbler__ball", "ring-1", nextMeta.ring)}
-                                style={{ backgroundColor: nextMeta.bg }}
-                                title={`Drawing ${nextBall.number} (${nextBall.color})`}
-                              >
-                                <span className="ball__number">{nextBall.number}</span>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })()}
-                    <div className="grid w-full max-w-[420px] grid-cols-5 justify-items-center gap-x-4 gap-y-3">
-                      {Array.from({ length: drawSlots }, (_, slotIdx) => {
-                        const ball = slotIdx < revealedCount ? lastResult.draw.balls[slotIdx] : null;
-                        const completionPosition = slotIdx + 1;
-                        const quotaIndex = completionPosition - 6;
-                        const quota =
-                          quotaIndex >= 0 && quotaIndex < comboCompletionPayouts.length
-                            ? comboCompletionPayouts[quotaIndex]
-                            : null;
-                        if (!ball) {
-                          return (
-                            <div key={`slot-${slotIdx}`} className="flex min-w-[74px] items-center gap-2">
-                              <div className="ball ball--sm ball--ghost" />
-                              <span
-                                className={clsx(
-                                  "text-xs font-semibold tabular-nums",
-                                  quota ? "text-slate-400" : "text-transparent"
-                                )}
-                              >
-                                {quota ? formatQuota(quota) : "0"}
-                              </span>
-                            </div>
-                          );
-                        }
-                        const meta = colorMeta[ball.color];
-                        return (
-                          <div
-                            key={`revealed-${slotIdx}`}
-                            className="flex min-w-[74px] items-center gap-2"
-                          >
-                            <div
-                              className={clsx("ball ball--sm", "ring-1", meta.ring)}
-                              style={{ backgroundColor: meta.bg }}
-                              title={`#${slotIdx + 1} - ${ball.number} (${ball.color})`}
-                            >
-                              <span className="ball__number text-[0.75rem]">{ball.number}</span>
-                            </div>
+                          <div key={`slot-${slotIdx}`} className="flex items-center justify-center gap-2">
+                            <div className="ball ball--sm ball--ghost" />
                             <span
                               className={clsx(
-                                "text-xs font-semibold tabular-nums",
-                                quota ? "text-slate-300" : "text-transparent"
+                                "text-xs font-semibold tabular-nums w-10 text-left",
+                                quota ? "text-slate-400" : "text-transparent"
                               )}
                             >
                               {quota ? formatQuota(quota) : "0"}
                             </span>
                           </div>
                         );
+                      }
+                      const meta = colorMeta[ball.color];
+                      return (
+                        <div
+                          key={`revealed-${slotIdx}`}
+                          className="flex items-center justify-center gap-2"
+                        >
+                          <div
+                            className={clsx("ball ball--sm", "ring-1", meta.ring)}
+                            style={{ backgroundColor: meta.bg }}
+                            title={`#${slotIdx + 1} - ${ball.number} (${ball.color})`}
+                          >
+                            <span className="ball__number text-[0.75rem]">{ball.number}</span>
+                          </div>
+                          <span
+                            className={clsx(
+                              "text-xs font-semibold tabular-nums w-10 text-left",
+                              quota ? "text-slate-300" : "text-transparent"
+                            )}
+                          >
+                            {quota ? formatQuota(quota) : "0"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="space-y-2 text-center">
+                  <div className="text-sm text-slate-300">Total stake: {usd.format(totalStakePreview)}</div>
+                  <div className="flex items-center justify-center">
+                    <button
+                      onClick={play}
+                      disabled={busy || isDrawing || pendingBets.length === 0}
+                      className="w-full max-w-sm rounded-xl bg-[#c5305f] px-6 py-3 text-lg font-semibold text-white transition hover:bg-[#a61a42] disabled:cursor-not-allowed disabled:bg-[#c5305f]/50"
+                    >
+                      {isDrawing ? "Round in progress" : busy ? "Playing..." : "Play Lucky 6"}
+                    </button>
+                  </div>
+                </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-4 flex-[1_1_48%] min-h-0">
+                {lastResult && !isDrawing ? (
+                  <div className="text-sm text-slate-300 text-center">
+                    Stake {usd.format(lastResult.totals.stake)} | Payout {usd.format(lastResult.totals.payout)} |{" "}
+                    <span
+                      className={clsx(
+                        "font-semibold",
+                        lastResult.totals.payout - lastResult.totals.stake > 0
+                          ? "text-emerald-400"
+                          : lastResult.totals.payout - lastResult.totals.stake < 0
+                          ? "text-rose-400"
+                          : "text-white"
+                      )}
+                    >
+                      Win/Loss{" "}
+                      {formatSignedUsd(lastResult.totals.payout - lastResult.totals.stake)}
+                    </span>
+                  </div>
+                ) : null}
+
+                {lastResult && !isDrawing && (
+                  <div className="rounded-lg border border-white/10 bg-slate-950/60 p-3 text-sm text-slate-200">
+                    <div className="font-semibold text-center">Bet results</div>
+                    <div className="mt-2 max-h-[150px] space-y-2 overflow-y-auto pr-1">
+                      {lastResult.bets.map((bet, idx) => {
+                        const winLoss = bet.payout - bet.amount;
+                        return (
+                          <div key={idx} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-200">
+                            <span className="font-semibold">{friendlyBetLabel(bet)}</span>
+                            <span className="text-xs text-slate-300">
+                              Stake {usd.format(bet.amount)} | Payout {usd.format(bet.payout)} |{" "}
+                              <span
+                                className={clsx(
+                                  "font-semibold",
+                                  winLoss > 0 ? "text-emerald-400" : winLoss < 0 ? "text-rose-400" : "text-white"
+                                )}
+                              >
+                                Win/Loss {formatSignedUsd(winLoss)}
+                              </span>
+                            </span>
+                          </div>
+                        );
                       })}
                     </div>
                   </div>
-                  {!isDrawing && (
-                    <div className="space-y-2 text-sm text-slate-200">
-                      <div className="font-semibold">Bets</div>
-                      <div className="space-y-2">
-                        {lastResult.bets.map((bet, idx) => {
-                          const winLoss = bet.payout - bet.amount;
-                          return (
-                            <div key={idx} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-200">
-                              <span className="font-semibold">{friendlyBetLabel(bet)}</span>
-                              <span className="text-xs text-slate-300">
-                                Stake {usd.format(bet.amount)} | Payout {usd.format(bet.payout)} |{" "}
-                                <span
-                                  className={clsx(
-                                    "font-semibold",
-                                    winLoss > 0 ? "text-emerald-400" : winLoss < 0 ? "text-rose-400" : "text-white"
-                                  )}
-                                >
-                                  Win/Loss {formatSignedUsd(winLoss)}
-                                </span>
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                )}
 
-              <div className="flex h-[320px] flex-col space-y-3 rounded-2xl border border-white/10 bg-slate-950/70 p-4 shadow-inner shadow-black/20">
-                <div className="flex items-center justify-between text-sm text-slate-200">
-                  <div className="font-semibold">Current bets</div>
-                  <div className="flex gap-2">
+                <div className="flex w-full flex-col rounded-2xl border border-white/10 bg-slate-950/70 p-4 text-left shadow-inner shadow-black/20">
+                  <div className="text-sm font-semibold text-slate-200 text-center">Current bets</div>
+                  <div
+                    className={clsx(
+                      "mt-3 space-y-2 pr-1",
+                      hasPendingBets ? "max-h-[132px] overflow-y-auto" : "max-h-none"
+                    )}
+                  >
+                    {!hasPendingBets && (
+                      <div className="text-sm text-slate-400 text-center">No bets added.</div>
+                    )}
+                    {pendingBets.map((bet, idx) => (
+                      <div
+                        key={`${bet.type}-${bet.pick}-${idx}`}
+                        className="flex items-center justify-between rounded-lg border border-white/10 bg-slate-900/70 px-3 py-2 text-sm text-slate-200"
+                      >
+                        <span className="font-semibold">{friendlyBetLabel(bet as Lucky6BetResponse)}</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-slate-400">{usd.format(bet.amount)}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeBet(bet.type, bet.pick)}
+                            className="text-xs text-red-400 hover:text-red-300"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-auto pt-3 flex flex-col items-center gap-2">
+                    <div className="text-sm text-slate-300">Total stake: {usd.format(totalStakePreview)}</div>
                     <button
                       type="button"
                       onClick={clearAllBets}
-                      className="rounded-md border border-white/15 px-3 py-1 text-xs text-slate-200 hover:border-white/40"
+                      disabled={!hasPendingBets}
+                      className="rounded-md border border-white/15 px-3 py-1 text-xs text-slate-200 transition hover:border-white/40 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Clear all bets
                     </button>
                   </div>
-                </div>
-                <div className="flex-1 space-y-2 overflow-y-auto pr-1">
-                  {pendingBets.length === 0 && <div className="text-sm text-slate-400">No bets added.</div>}
-                  {pendingBets.map((bet, idx) => (
-                    <div
-                      key={`${bet.type}-${bet.pick}-${idx}`}
-                      className="flex items-center justify-between rounded-lg border border-white/10 bg-slate-900/70 px-3 py-2 text-sm text-slate-200"
-                    >
-                      <span className="font-semibold">{friendlyBetLabel(bet as Lucky6BetResponse)}</span>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-slate-400">{usd.format(bet.amount)}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeBet(bet.type, bet.pick)}
-                          className="text-xs text-red-400 hover:text-red-300"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    </div>
-                  ))}
                 </div>
               </div>
             </div>
@@ -738,8 +747,8 @@ export default function Lucky6Page() {
 /* Ball styling */
 const ballBase = `
   .ball {
-    width: 52px;
-    height: 52px;
+    width: 42px;
+    height: 42px;
     border-radius: 9999px;
     display: inline-flex;
     align-items: center;
@@ -755,7 +764,7 @@ const ballBase = `
   .ball::after {
     content: "";
     position: absolute;
-    inset: 6px;
+    inset: 5px;
     border-radius: 9999px;
     background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4), transparent 60%);
     pointer-events: none;
@@ -773,8 +782,8 @@ const ballBase = `
   }
   .tumbler {
     position: relative;
-    width: 140px;
-    height: 140px;
+    width: 64px;
+    height: 64px;
     border-radius: 9999px;
     border: 1px solid rgba(255, 255, 255, 0.12);
     background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.12), rgba(2,6,23,0.9) 60%);
@@ -785,7 +794,7 @@ const ballBase = `
   }
   .tumbler__ring {
     position: absolute;
-    inset: 8px;
+    inset: 3px;
     border-radius: 9999px;
     border: 2px dashed rgba(255, 255, 255, 0.25);
     animation: tumble-spin 1.2s linear infinite;
@@ -796,8 +805,8 @@ const ballBase = `
   }
   .tumbler__ball {
     position: absolute;
-    width: 36px;
-    height: 36px;
+    width: 29px;
+    height: 29px;
     border-radius: 9999px;
     display: inline-flex;
     align-items: center;
@@ -812,7 +821,7 @@ const ballBase = `
   }
   @keyframes ball-drop {
     0% {
-      transform: translateY(-28px) scale(0.9);
+      transform: translateY(-22px) scale(0.9);
       opacity: 0;
     }
     100% {
@@ -822,11 +831,16 @@ const ballBase = `
   }
 `;
 
-if (typeof document !== "undefined" && !document.getElementById("lucky6-ball-style")) {
-  const style = document.createElement("style");
-  style.id = "lucky6-ball-style";
-  style.textContent = ballBase;
-  document.head.appendChild(style);
+if (typeof document !== "undefined") {
+  const existing = document.getElementById("lucky6-ball-style") as HTMLStyleElement | null;
+  if (existing) {
+    existing.textContent = ballBase;
+  } else {
+    const style = document.createElement("style");
+    style.id = "lucky6-ball-style";
+    style.textContent = ballBase;
+    document.head.appendChild(style);
+  }
 }
 
 function parseAmount(value: string): number {

@@ -520,7 +520,7 @@ export default function BlackjackPage() {
                 disabled={!canDeal || !amountValid}
                 className="w-full rounded-xl bg-[#c5305f] px-6 py-3 text-lg font-semibold text-white transition hover:bg-[#a61a42] disabled:cursor-not-allowed disabled:bg-[#c5305f]/50"
               >
-                {busy && game.phase !== "player" ? "Dealing..." : "Deal cards"}
+                {game.phase === "player" ? "Hand in progress" : busy ? "Dealing..." : "Deal cards"}
               </button>
               {game.phase === "player" && (
                 <>

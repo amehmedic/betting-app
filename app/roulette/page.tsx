@@ -132,8 +132,8 @@ export default function RoulettePage() {
           setResult(pendingResult);
           setWheelSpinning(false);
           spinTimeout.current = null;
+          window.dispatchEvent(new Event("wallet:update"));
         }, SPIN_DURATION_MS);
-        window.dispatchEvent(new Event("wallet:update"));
       }
     } catch (e) {
       console.error(e);
@@ -260,13 +260,48 @@ export default function RoulettePage() {
   const winningsFromStakes =
     result?.payouts?.reduce((acc, val, idx) => (val > 0 ? acc + Number(lastSpinBets[idx]?.amount || 0) : acc), 0) || 0;
   const net = result ? result.totalPayout - result.totalStake + winningsFromStakes : 0;
+  const formatBetLabel = (bet: BetInput) => {
+    switch (bet.type) {
+      case "color":
+        return `Color ${bet.pick === "red" ? "red" : "black"}`;
+      case "parity":
+        return `Parity ${bet.pick === "even" ? "even" : "odd"}`;
+      case "range":
+        return bet.pick === "high" ? "Range 19-36" : "Range 1-18";
+      case "column":
+        return `Column ${bet.pick}`;
+      case "dozen":
+        return bet.pick === 1 ? "Dozen 1-12" : bet.pick === 2 ? "Dozen 13-24" : "Dozen 25-36";
+      case "split":
+        return `Split ${Array.isArray(bet.pick) ? bet.pick.join(",") : bet.pick}`;
+      case "corner":
+        return `Corner ${Array.isArray(bet.pick) ? bet.pick.join(",") : bet.pick}`;
+      case "straight":
+      default:
+        return `Straight ${renderValue(bet.pick as RouletteValue)}`;
+    }
+  };
+  const perBetResults = result
+    ? lastSpinBets.map((bet, idx) => {
+        const stake = Number(bet.amount || 0);
+        const payout = result.payouts?.[idx] ?? 0;
+        const totalReturn = payout > 0 ? payout + stake : 0;
+        const winLoss = totalReturn - stake;
+        return {
+          label: formatBetLabel(bet),
+          stake,
+          payout: totalReturn,
+          winLoss,
+        };
+      })
+    : [];
 
   return (
     <DashboardShell title="" description="">
       <div className="mx-auto max-w-6xl space-y-8 text-center">
         <h1 className="text-3xl font-semibold text-white text-center">Roulette</h1>
         <div className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-5 shadow-xl shadow-black/30">
-          <div className="grid gap-5 items-start lg:grid-cols-[45%_55%]">
+          <div className="grid gap-5 items-start lg:grid-cols-[50%_50%]">
             {/* Left column: amount, table, payouts */}
             <div className="flex w-full flex-col items-center justify-start space-y-4 text-left">
               <div className="flex flex-col items-center gap-2">
@@ -285,18 +320,18 @@ export default function RoulettePage() {
               </div>
               
               <div
-                className="grid w-full max-w-full gap-[5px] rounded-xl border border-white/10 bg-linear-to-br from-[#0b3b1c] to-[#0f2f1c] p-4"
+                className="grid w-full max-w-full gap-[5px] rounded-xl border border-white/10 bg-linear-to-br from-[#0b3b1c] to-[#0f2f1c] px-[18px] py-[18px]"
                 style={{
-                  gridTemplateColumns: "repeat(5, minmax(68px, 1fr))",
-                  gridTemplateRows: "46px repeat(12,46px) 55px",
+                  gridTemplateColumns: "repeat(5, minmax(64px, 1fr))",
+                  gridTemplateRows: "43px repeat(12,43px) 43px",
                 }}
               >
                 {/* 0 spanning top across number columns */}
-                <div className="relative col-start-3 col-span-3 row-start-1 flex items-center justify-center">
+                <div className="relative col-start-3 col-span-3 row-start-1 flex h-full items-center justify-center">
                   <button
                     onClick={() => addBet({ type: "straight", pick: 0, amount })}
                     className={clsx(
-                      "relative w-full rounded-lg border border-white/20 bg-green-700/80 px-3 py-3 text-sm font-semibold text-white hover:border-white/80",
+                      "relative h-full w-full rounded-lg border border-white/20 bg-green-700/80 p-2 text-sm font-semibold text-white hover:border-white/80",
                       isHovered(0) && "ring-2 ring-white/80 ring-offset-2 ring-offset-slate-900"
                     )}
                     disabled={busy}
@@ -325,7 +360,7 @@ export default function RoulettePage() {
                           })
                         }
                         className={clsx(
-                          "relative rounded-md border border-white/10 text-sm font-semibold text-white transition",
+                          "relative h-full w-full rounded-md border border-white/10 p-2 text-sm font-semibold text-white transition",
                           red
                             ? "bg-linear-to-br from-[#c5305f] to-[#8b1d3c]"
                             : green
@@ -426,7 +461,7 @@ export default function RoulettePage() {
                         amount,
                       })
                     }
-                    className="relative rounded-md border border-white/20 bg-green-800/70 py-2 text-xs font-semibold text-white hover:border-white/80"
+                    className="relative h-full w-full rounded-md border border-white/20 bg-green-800/70 p-2 text-xs font-semibold text-white hover:border-white/80"
                     style={{ gridColumn: 2 + c, gridRow: 14 }}
                     disabled={busy}
                     onMouseEnter={() => setHoverPicks(hoverSets.column[columnHoverMap[c as 1 | 2 | 3]])}
@@ -440,7 +475,7 @@ export default function RoulettePage() {
                 {/* dozens in second column */}
                 <button
                   onClick={() => addBet({ type: "dozen", pick: 3, amount })}
-                  className="relative rounded-md border border-white/20 bg-green-800/70 px-2 py-2 text-xs font-semibold text-white hover:border-white/80"
+                  className="relative h-full w-full rounded-md border border-white/20 bg-green-800/70 p-2 text-xs font-semibold text-white hover:border-white/80"
                   style={{ gridColumn: 2, gridRow: "10 / span 4" }}
                   disabled={busy}
                   onMouseEnter={() => setHoverPicks(hoverSets.dozen[3])}
@@ -451,7 +486,7 @@ export default function RoulettePage() {
                 </button>
                 <button
                   onClick={() => addBet({ type: "dozen", pick: 2, amount })}
-                  className="relative rounded-md border border-white/20 bg-green-800/70 px-2 py-2 text-xs font-semibold text-white hover:border-white/80"
+                  className="relative h-full w-full rounded-md border border-white/20 bg-green-800/70 p-2 text-xs font-semibold text-white hover:border-white/80"
                   style={{ gridColumn: 2, gridRow: "6 / span 4" }}
                   disabled={busy}
                   onMouseEnter={() => setHoverPicks(hoverSets.dozen[2])}
@@ -462,7 +497,7 @@ export default function RoulettePage() {
                 </button>
                 <button
                   onClick={() => addBet({ type: "dozen", pick: 1, amount })}
-                  className="relative rounded-md border border-white/20 bg-green-800/70 px-2 py-2 text-xs font-semibold text-white hover-border-white/80"
+                  className="relative h-full w-full rounded-md border border-white/20 bg-green-800/70 p-2 text-xs font-semibold text-white hover-border-white/80"
                   style={{ gridColumn: 2, gridRow: "2 / span 4" }}
                   disabled={busy}
                   onMouseEnter={() => setHoverPicks(hoverSets.dozen[1])}
@@ -475,7 +510,7 @@ export default function RoulettePage() {
                 {/* left-side outside bets */}
                 <button
                   onClick={() => addBet({ type: "range", pick: "low", amount })}
-                  className="relative rounded-md border border-white/20 bg-green-800/70 px-2 py-2 text-xs font-semibold text-white hover-border-white/80"
+                  className="relative h-full w-full rounded-md border border-white/20 bg-green-800/70 p-2 text-xs font-semibold text-white hover-border-white/80"
                   style={{ gridColumn: 1, gridRow: "2 / span 3" }}
                   disabled={busy}
                   onMouseEnter={() => setHoverPicks(hoverSets.range.low)}
@@ -486,7 +521,7 @@ export default function RoulettePage() {
                 </button>
                 <button
                   onClick={() => addBet({ type: "parity", pick: "even", amount })}
-                  className="relative rounded-md border border-white/20 bg-green-800/70 px-2 py-2 text-xs font-semibold text-white hover-border-white/80"
+                  className="relative h-full w-full rounded-md border border-white/20 bg-green-800/70 p-2 text-xs font-semibold text-white hover-border-white/80"
                   style={{ gridColumn: 1, gridRow: "5 / span 2" }}
                   disabled={busy}
                   onMouseEnter={() => setHoverPicks(hoverSets.parity.even)}
@@ -497,7 +532,7 @@ export default function RoulettePage() {
                 </button>
                 <button
                   onClick={() => addBet({ type: "color", pick: "red", amount })}
-                  className="relative rounded-md border border-white/20 bg-linear-to-br from-[#c5305f] to-[#8b1d3c] px-2 py-2 text-xs font-semibold text-white hover-border-white/80"
+                  className="relative h-full w-full rounded-md border border-white/20 bg-linear-to-br from-[#c5305f] to-[#8b1d3c] p-2 text-xs font-semibold text-white hover-border-white/80"
                   style={{ gridColumn: 1, gridRow: 7 }}
                   disabled={busy}
                   onMouseEnter={() => setHoverPicks(hoverSets.color.red)}
@@ -508,7 +543,7 @@ export default function RoulettePage() {
                 </button>
                 <button
                   onClick={() => addBet({ type: "color", pick: "black", amount })}
-                  className="relative rounded-md border border-white/20 bg-linear-to-br from-[#0f172a] to-[#1f2937] px-2 py-2 text-xs font-semibold text-white hover-border-white/80"
+                  className="relative h-full w-full rounded-md border border-white/20 bg-linear-to-br from-[#0f172a] to-[#1f2937] p-2 text-xs font-semibold text-white hover-border-white/80"
                   style={{ gridColumn: 1, gridRow: 8 }}
                   disabled={busy}
                   onMouseEnter={() => setHoverPicks(hoverSets.color.black)}
@@ -519,7 +554,7 @@ export default function RoulettePage() {
                 </button>
                 <button
                   onClick={() => addBet({ type: "parity", pick: "odd", amount })}
-                  className="relative rounded-md border border-white/20 bg-green-800/70 px-2 py-2 text-xs font-semibold text-white hover-border-white/80"
+                  className="relative h-full w-full rounded-md border border-white/20 bg-green-800/70 p-2 text-xs font-semibold text-white hover-border-white/80"
                   style={{ gridColumn: 1, gridRow: "9 / span 2" }}
                   disabled={busy}
                   onMouseEnter={() => setHoverPicks(hoverSets.parity.odd)}
@@ -530,7 +565,7 @@ export default function RoulettePage() {
                 </button>
                 <button
                   onClick={() => addBet({ type: "range", pick: "high", amount })}
-                  className="relative rounded-md border border-white/20 bg-green-800/70 px-2 py-2 text-xs font-semibold text-white hover-border-white/80"
+                  className="relative h-full w-full rounded-md border border-white/20 bg-green-800/70 p-2 text-xs font-semibold text-white hover-border-white/80"
                   style={{ gridColumn: 1, gridRow: "11 / span 3" }}
                   disabled={busy}
                   onMouseEnter={() => setHoverPicks(hoverSets.range.high)}
@@ -553,9 +588,11 @@ export default function RoulettePage() {
             </div>
 
             {/* Right column: wheel, spin, bets */}
-            <div className="flex w-full flex-col gap-4 pr-5">
-              <div className="rounded-xl border border-white/10 bg-slate-900/80 p-6 shadow-lg shadow-black/30 w-full">
-                <div className="wheel-container mx-auto h-[405px] w-[405px] rounded-full border border-white/10 bg-slate-950/70 shadow-inner shadow-black/30">
+            <div className="flex w-full flex-col gap-4 pr-5 h-full">
+              <div className="flex flex-col gap-4 flex-[0_0_52%] min-h-0">
+                <div className="rounded-xl border border-white/10 bg-slate-900/80 p-4 shadow-lg shadow-black/30 w-full h-full flex flex-col">
+                <div className="flex flex-1 items-center justify-center">
+                  <div className="wheel-container mx-auto w-[320px] h-[320px] rounded-full border border-white/10 bg-slate-950/70 shadow-inner shadow-black/30">
                   {mounted ? (
                     <div className="wheel" style={{ transform: `rotate(${rotation}deg)` }}>
                       <svg viewBox="0 0 100 100" className="wheel__svg">
@@ -599,6 +636,7 @@ export default function RoulettePage() {
                   )}
                   <div className="wheel__marker" />
                 </div>
+                </div>
                 {error && <div className="mt-2 text-sm text-red-300 text-center">{error}</div>}
 
                 <div className="mt-4 text-sm text-slate-200 text-center">
@@ -632,39 +670,77 @@ export default function RoulettePage() {
                     </div>
                   </div>
                 )}
+                </div>
               </div>
 
-              <div className="w-full rounded-lg border border-white/10 bg-slate-950/60 p-4 text-left space-y-3">
-                <h3 className="text-sm font-semibold text-slate-200 mb-2 text-center">Current bets</h3>
-                {bets.length === 0 ? (
-                  <div className="text-sm text-slate-400 text-center">No bets added.</div>
-                ) : (
-                  <div className="space-y-2">
-                    {bets.map((b, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-slate-200"
-                      >
-                        <span>{formatBet(b)}</span>
-                        <button
-                          onClick={() => setBets((prev) => prev.filter((_, i) => i !== idx))}
-                          className="text-xs text-slate-400 hover:text-white"
-                        >
-                          Remove
-                        </button>
+              <div className="flex flex-col gap-4 flex-[1_1_48%] min-h-0">
+                {result && (
+                  <div className="w-full rounded-lg border border-white/10 bg-slate-950/60 p-4 text-left space-y-3">
+                    <h3 className="text-sm font-semibold text-slate-200 mb-2 text-center">Bet results</h3>
+                    {perBetResults.length === 0 ? (
+                      <div className="text-sm text-slate-400 text-center">No bet results.</div>
+                    ) : (
+                      <div className="max-h-[150px] overflow-y-auto pr-1 space-y-2">
+                        {perBetResults.map((bet, idx) => (
+                          <div
+                            key={`result-${idx}`}
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-200"
+                          >
+                            <span className="font-semibold">{bet.label}</span>
+                            <span className="text-xs text-slate-300">
+                              Stake ${bet.stake.toFixed(2)} | Payout ${bet.payout.toFixed(2)} |{" "}
+                              <span
+                                className={clsx(
+                                  "font-semibold",
+                                  bet.winLoss > 0
+                                    ? "text-emerald-300"
+                                    : bet.winLoss < 0
+                                    ? "text-rose-300"
+                                    : "text-white"
+                                )}
+                              >
+                                Win/Loss {bet.winLoss < 0 ? `-$${Math.abs(bet.winLoss).toFixed(2)}` : `$${bet.winLoss.toFixed(2)}`}
+                              </span>
+                            </span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
                 )}
-                <div className="flex flex-col items-center gap-2 text-sm text-slate-200">
-                  <div>Total stake: ${totalStake.toFixed(2)}</div>
-                  <button
-                    onClick={clearBets}
-                    className="rounded-lg border border-white/20 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-white/80 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-                    disabled={busy || bets.length === 0}
-                  >
-                    Clear all bets
-                  </button>
+
+                <div className="w-full rounded-lg border border-white/10 bg-slate-950/60 p-4 text-left space-y-3">
+                  <h3 className="text-sm font-semibold text-slate-200 mb-2 text-center">Current bets</h3>
+                  {bets.length === 0 ? (
+                    <div className="text-sm text-slate-400 text-center">No bets added.</div>
+                  ) : (
+                    <div className="max-h-[150px] overflow-y-auto pr-1 space-y-2">
+                      {bets.map((b, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-slate-200"
+                        >
+                          <span>{formatBet(b)}</span>
+                          <button
+                            onClick={() => setBets((prev) => prev.filter((_, i) => i !== idx))}
+                            className="text-xs text-slate-400 hover:text-white"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex flex-col items-center gap-2 text-sm text-slate-200">
+                    <div>Total stake: ${totalStake.toFixed(2)}</div>
+                    <button
+                      onClick={clearBets}
+                      className="rounded-lg border border-white/20 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-white/80 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={busy || bets.length === 0}
+                    >
+                      Clear all bets
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
