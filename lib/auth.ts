@@ -12,6 +12,7 @@ export const authConfig: NextAuthOptions = {
       name: "Credentials",
       credentials: {
         identifier: { label: "Email or username", type: "text" },
+        identifier: { label: "Email or username", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(creds) {
