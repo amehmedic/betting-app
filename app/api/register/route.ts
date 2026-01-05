@@ -16,16 +16,22 @@ export async function POST(req: Request) {
     const { email, password, username, avatarUrl } = schema.parse(body);
 
     const exists = await prisma.user.findUnique({ where: { email } });
-    if (exists) return NextResponse.json({ error: "Email already in use" }, { status: 400 });
+    if (exists) return NextResponse.json({ error: "Email already in use" }, { status: 409 });
 
     let finalUsername = username ?? email.split("@")[0];
-    if (finalUsername.length < 3) {
-      finalUsername = `${finalUsername}${Math.floor(Math.random() * 1000)}`;
-    }
-    // ensure unique username
-    const existingUserName = await prisma.user.findUnique({ where: { username: finalUsername } });
-    if (existingUserName) {
-      finalUsername = `${finalUsername}-${Math.floor(Math.random() * 9999)}`;
+    if (username) {
+      const existingUserName = await prisma.user.findUnique({ where: { username } });
+      if (existingUserName) {
+        return NextResponse.json({ error: "Username already in use" }, { status: 409 });
+      }
+    } else {
+      if (finalUsername.length < 3) {
+        finalUsername = `${finalUsername}${Math.floor(Math.random() * 1000)}`;
+      }
+      const existingUserName = await prisma.user.findUnique({ where: { username: finalUsername } });
+      if (existingUserName) {
+        finalUsername = `${finalUsername}-${Math.floor(Math.random() * 9999)}`;
+      }
     }
 
     const passwordHash = await hash(password);

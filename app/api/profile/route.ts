@@ -5,10 +5,15 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { verify } from "argon2";
 
+const avatarUrlSchema = z.string().trim().refine(
+  (value) => value.startsWith("/") || /^https?:\/\//i.test(value),
+  { message: "Invalid avatar URL" }
+);
+
 const updateSchema = z.object({
   email: z.string().email().optional(),
   username: z.string().min(3).max(32).optional(),
-  avatarUrl: z.string().url().optional(),
+  avatarUrl: avatarUrlSchema.optional(),
   currentPassword: z.string().min(1).optional(),
 });
 
@@ -51,9 +56,9 @@ export async function PUT(req: Request) {
     const existing = await prisma.user.findUnique({ where: { id: session.user.id } });
     if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    if ((email || username) && !currentPassword) {
+    if (email && !currentPassword) {
       return NextResponse.json(
-        { error: "Current password required to change email or username" },
+        { error: "Current password required to change email" },
         { status: 400 }
       );
     }

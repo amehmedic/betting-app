@@ -14,9 +14,12 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/coin", label: "Coin Flip" },
+  { href: "/slots", label: "Slots" },
   { href: "/blackjack", label: "Blackjack" },
+  { href: "/poker", label: "Poker" },
   { href: "/roulette", label: "Roulette" },
   { href: "/lucky6", label: "Lucky 6" },
+  { href: "/sports", label: "Sportsbook" },
 ];
 
 const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });

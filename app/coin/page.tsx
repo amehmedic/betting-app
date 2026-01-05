@@ -13,7 +13,7 @@ function notifyWalletUpdate() {
 }
 
 export default function CoinPage() {
-  const [amount, setAmount] = useState("1.00"); // keep raw input so users can edit freely
+  const [amount, setAmount] = useState("5.00"); // keep raw input so users can edit freely
   const [pick, setPick] = useState<"heads" | "tails">("heads");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
@@ -90,10 +90,9 @@ export default function CoinPage() {
           setResultTone(pendingResultToneRef.current);
           pendingResultToneRef.current = null;
         }
+        notifyWalletUpdate();
         spinTimeout.current = null;
       }, SPIN_DURATION_MS);
-
-      notifyWalletUpdate();
     } catch (err) {
       console.error(err);
       setCoinSpinning(false);
@@ -159,10 +158,10 @@ export default function CoinPage() {
             </div>
             <button
               onClick={flip}
-              disabled={busy || !amountValid}
+              disabled={busy || coinSpinning || !amountValid}
               className="w-full max-w-sm rounded-xl bg-[#c5305f] px-4 py-3 text-lg font-semibold tracking-wide text-white transition hover:bg-[#a61a42] disabled:cursor-not-allowed disabled:bg-[#c5305f]/50"
             >
-              {busy ? "Flipping..." : "Flip the coin"}
+              {coinSpinning || busy ? "Flipping..." : "Flip the coin"}
             </button>
           </div>
 
@@ -191,7 +190,7 @@ export default function CoinPage() {
                 className={clsx(
                   "mt-4 rounded-xl border p-4 text-sm leading-relaxed",
                   resultTone === "win"
-                    ? "border-[#5c7cfa] bg-[#5c7cfa]/15 text-[#dfe6ff]"
+                    ? "border-emerald-400/50 bg-emerald-500/10 text-emerald-100"
                     : resultTone === "loss"
                     ? "border-rose-500/70 bg-rose-500/15 text-rose-100"
                     : "border-slate-500/40 bg-slate-800/40 text-slate-200"

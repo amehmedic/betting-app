@@ -11,12 +11,20 @@ export const authConfig: NextAuthOptions = {
     Credentials({
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        identifier: { label: "Email or username", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(creds) {
-        if (!creds?.email || !creds?.password) return null;
-        const user = await prisma.user.findUnique({ where: { email: creds.email } });
+        const identifier = (creds?.identifier ?? "").trim();
+        if (!identifier || !creds?.password) return null;
+        const user = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { email: { equals: identifier } },
+              { username: { equals: identifier } },
+            ],
+          },
+        });
         if (!user) return null;
         const ok = await verify(user.passwordHash, creds.password);
         return ok

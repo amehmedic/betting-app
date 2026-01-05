@@ -520,7 +520,7 @@ export default function BlackjackPage() {
                 disabled={!canDeal || !amountValid}
                 className="w-full rounded-xl bg-[#c5305f] px-6 py-3 text-lg font-semibold text-white transition hover:bg-[#a61a42] disabled:cursor-not-allowed disabled:bg-[#c5305f]/50"
               >
-                {busy && game.phase !== "player" ? "Dealing..." : "Deal cards"}
+                {game.phase === "player" ? "Hand in progress" : busy ? "Dealing..." : "Deal cards"}
               </button>
               {game.phase === "player" && (
                 <>
@@ -594,7 +594,7 @@ export default function BlackjackPage() {
                 className={clsx(
                   "rounded-xl border p-4 text-sm font-medium text-center transition",
                   resultTone === "win"
-                    ? "border-[#5c7cfa] bg-[#5c7cfa]/15 text-[#dfe6ff]"
+                    ? "border-emerald-400/50 bg-emerald-500/10 text-emerald-100"
                     : resultTone === "loss"
                     ? "border-rose-500/70 bg-rose-500/15 text-rose-100"
                     : "border-slate-500/40 bg-slate-800/40 text-slate-200"

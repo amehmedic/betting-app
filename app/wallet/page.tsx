@@ -25,11 +25,12 @@ function notifyWalletUpdate() {
 }
 
 const QUICK_DEPOSIT_AMOUNTS = [1, 5, 10, 25, 50, 100];
-type Panel = "add" | "withdraw" | "transactions";
+type Panel = "add" | "withdraw" | "send" | "transactions";
 
 const PANEL_OPTIONS: { id: Panel; label: string; helper: string }[] = [
   { id: "add", label: "Add funds", helper: "Top up your bankroll instantly." },
   { id: "withdraw", label: "Withdraw funds", helper: "Move winnings back to cash." },
+  { id: "send", label: "Send funds", helper: "Transfer balance to another user." },
   { id: "transactions", label: "Transactions", helper: "Review your latest ledger entries." },
 ];
 
@@ -43,6 +44,11 @@ export default function WalletPage() {
   const [withdrawing, setWithdrawing] = useState(false);
   const [customWithdrawAmount, setCustomWithdrawAmount] = useState("10.00");
   const [activePanel, setActivePanel] = useState<Panel>("add");
+  const [transferRecipient, setTransferRecipient] = useState("");
+  const [transferAmount, setTransferAmount] = useState("5.00");
+  const [transferring, setTransferring] = useState(false);
+  const [transferMessage, setTransferMessage] = useState<string | null>(null);
+  const [transferError, setTransferError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -124,11 +130,40 @@ export default function WalletPage() {
     }
   }
 
-  const parsedCustomWithdrawAmount =
-    customWithdrawAmount.trim() === "" ? NaN : Number(customWithdrawAmount);
+  async function transfer(amountDollars: number, recipient: string) {
+    setTransferring(true);
+    setTransferMessage(null);
+    setTransferError(null);
+    const res = await fetch("/api/wallet/transfer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount: amountDollars, recipient }),
+    });
+    if (res.status === 401) {
+      setTransferring(false);
+      router.replace("/login?callback=/wallet");
+      return;
+    }
+    const json = await res.json().catch(() => ({}));
+    setTransferring(false);
+    if (res.ok) {
+      setTransferMessage("Transfer sent.");
+      setTransferRecipient("");
+      await load();
+      notifyWalletUpdate();
+    } else {
+      setTransferError(json?.error ?? "Transfer failed");
+    }
+  }
 
   const balanceCents = wallet ? Number(wallet.balance) : 0;
   const balanceDollars = balanceCents / 100;
+
+  const parsedCustomWithdrawAmount =
+    customWithdrawAmount.trim() === "" ? NaN : Number(customWithdrawAmount);
+  const parsedTransferAmount = transferAmount.trim() === "" ? NaN : Number(transferAmount);
+  const transferAmountValid =
+    Number.isFinite(parsedTransferAmount) && parsedTransferAmount > 0 && parsedTransferAmount <= balanceDollars;
 
   const fmt = (s?: string) =>
     (Number(s ?? "0") / 100).toLocaleString(undefined, {
@@ -256,6 +291,77 @@ export default function WalletPage() {
           <p className="text-xs text-slate-400">
             Current available balance: {fmt(wallet.balance)} USD.
           </p>
+        </div>
+      );
+    }
+
+    if (activePanel === "send") {
+      const recipientValid = transferRecipient.trim().length > 0;
+      return (
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-xl font-semibold text-white">Send funds</h3>
+            <p className="text-sm text-slate-400">
+              Transfer USD to another user by username or email.
+            </p>
+          </div>
+          {(transferMessage || transferError) && (
+            <div
+              className={clsx(
+                "rounded-xl border px-4 py-3 text-sm",
+                transferMessage
+                  ? "border-emerald-400/50 bg-emerald-500/10 text-emerald-100"
+                  : "",
+                transferError ? "border-rose-400/50 bg-rose-500/10 text-rose-100" : ""
+              )}
+            >
+              {transferMessage ?? transferError}
+            </div>
+          )}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!recipientValid || !transferAmountValid) return;
+              void transfer(parsedTransferAmount, transferRecipient.trim());
+            }}
+            className="space-y-4"
+          >
+            <div className="space-y-2">
+              <label className="text-xs uppercase tracking-wide text-slate-400">
+                Recipient (username or email)
+              </label>
+              <input
+                type="text"
+                value={transferRecipient}
+                onChange={(e) => setTransferRecipient(e.target.value)}
+                className="w-full rounded border border-white/20 bg-slate-900/60 px-3 py-2 text-sm text-white focus:border-[#5c7cfa] focus:outline-none focus:ring-2 focus:ring-[#5c7cfa]/30"
+                placeholder="username or email"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs uppercase tracking-wide text-slate-400">
+                Amount (USD)
+              </label>
+              <input
+                type="number"
+                min={0.01}
+                step={0.01}
+                value={transferAmount}
+                onChange={(e) => setTransferAmount(e.target.value)}
+                className="w-full rounded border border-white/20 bg-slate-900/60 px-3 py-2 text-sm text-white focus:border-[#5c7cfa] focus:outline-none focus:ring-2 focus:ring-[#5c7cfa]/30 sm:max-w-[160px]"
+              />
+              <p className="text-xs text-slate-400">
+                Available balance: {fmt(wallet.balance)} USD.
+              </p>
+            </div>
+            <button
+              type="submit"
+              disabled={transferring || !recipientValid || !transferAmountValid}
+              className="rounded-lg bg-[#c5305f] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#a61a42] disabled:cursor-not-allowed disabled:bg-[#c5305f]/50"
+            >
+              {transferring ? "Sending..." : "Send funds"}
+            </button>
+          </form>
         </div>
       );
     }

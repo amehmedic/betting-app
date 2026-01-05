@@ -7,19 +7,27 @@ import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
     setLoading(true);
     const form = new FormData(e.currentTarget);
-    const email = String(form.get("email"));
+    const identifier = String(form.get("identifier"));
     const password = String(form.get("password"));
-    const res = await signIn("credentials", { email, password, redirect: false });
+    const res = await signIn("credentials", { identifier, password, redirect: false });
     setLoading(false);
     if (res?.ok) router.push("/");
-    else alert(res?.error ?? "Login failed");
+    else {
+      const message =
+        res?.error === "CredentialsSignin"
+          ? "Your login information was incorrect."
+          : "We couldn't sign you in. Please try again.";
+      setError(message);
+    }
   }
 
   return (
@@ -31,11 +39,11 @@ export default function LoginPage() {
         </div>
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2 text-left">
-            <label className="text-xs uppercase tracking-wide text-slate-400">Email</label>
+            <label className="text-xs uppercase tracking-wide text-slate-400">Email or username</label>
             <input
-              name="email"
-              type="email"
-              placeholder="Email"
+              name="identifier"
+              type="text"
+              placeholder="Email or username"
               className="w-full rounded-lg border border-white/15 bg-slate-950/70 px-3 py-2 text-sm text-white focus:border-[#5c7cfa] focus:outline-none focus:ring-2 focus:ring-[#5c7cfa]/30"
               required
             />
@@ -60,6 +68,15 @@ export default function LoginPage() {
               </button>
             </div>
           </div>
+          {error ? (
+            <div
+              role="alert"
+              aria-live="polite"
+              className="rounded-lg border border-[#c5305f]/40 bg-[#c5305f]/10 px-3 py-2 text-sm text-rose-200"
+            >
+              {error}
+            </div>
+          ) : null}
           <button
             disabled={loading}
             className="w-full rounded-lg bg-[#c5305f] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#a61a42] disabled:cursor-not-allowed disabled:bg-[#c5305f]/50"

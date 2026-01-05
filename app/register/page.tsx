@@ -7,10 +7,14 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
+    setMessage(null);
+    setError(null);
     const form = new FormData(e.currentTarget);
     const email = String(form.get("email"));
     const username = String(form.get("username"));
@@ -18,20 +22,30 @@ export default function RegisterPage() {
     const confirm = String(form.get("confirm"));
 
     if (password !== confirm) {
-      alert("Passwords do not match.");
+      setError("Passwords do not match.");
       setLoading(false);
       return;
     }
 
-    const res = await fetch("/api/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, username }),
-    });
-
-    setLoading(false);
-    const body = await res.json().catch(() => ({}));
-    alert(res.ok ? "Registered! You can log in now." : body.error ?? "Failed");
+    try {
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, username }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(body.error ?? "Registration failed.");
+        return;
+      }
+      setMessage("Account created. You can log in now.");
+      e.currentTarget.reset();
+    } catch (err) {
+      console.error(err);
+      setError("Registration failed.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -41,6 +55,15 @@ export default function RegisterPage() {
           <h1 className="text-3xl font-bold text-white">Create account</h1>
           <p className="mt-2 text-sm text-slate-400">Join to place bets and manage your profile.</p>
         </div>
+        {(message || error) && (
+          <div
+            className={`mb-4 rounded-xl border px-4 py-3 text-sm ${
+              message ? "border-emerald-400/50 bg-emerald-500/10 text-emerald-100" : ""
+            } ${error ? "border-rose-400/50 bg-rose-500/10 text-rose-100" : ""}`}
+          >
+            {message ?? error}
+          </div>
+        )}
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2 text-left">
             <label className="text-xs uppercase tracking-wide text-slate-400">Email</label>

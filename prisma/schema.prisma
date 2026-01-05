@@ -21,6 +21,10 @@ model User {
   sessions      Session[]
   wallets       Wallet[]
   blackjackGames BlackjackGame[]
+  pokerQueues   PokerQueue[]
+  pokerRounds   PokerRoundPlayer[]
+  pokerSeats    PokerSeat[]
+  sportsBets    SportsBet[]
 }
 
 model Wallet {
@@ -101,4 +105,137 @@ model VerificationToken {
   token      String   @unique
   expires    DateTime
   @@unique([identifier, token])
+}
+
+model Lucky6Round {
+  roundId         Int   @id
+  balls           Json
+  completionOrder Json
+  createdAt       DateTime @default(now())
+}
+
+model PokerQueue {
+  id         String   @id @default(cuid())
+  userId     String
+  buyInCents Int
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([buyInCents, createdAt])
+  @@index([userId])
+}
+
+model PokerRound {
+  id             String   @id @default(cuid())
+  buyInCents     Int
+  potCents       Int
+  communityCards Json
+  winnerUserIds  Json
+  createdAt      DateTime @default(now())
+
+  players PokerRoundPlayer[]
+}
+
+model PokerRoundPlayer {
+  id        String   @id @default(cuid())
+  roundId   String
+  userId    String
+  hand      Json
+  result    String
+  createdAt DateTime @default(now())
+
+  round PokerRound @relation(fields: [roundId], references: [id])
+  user  User       @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([roundId])
+}
+
+model PokerTable {
+  id         String   @id @default(cuid())
+  buyInCents Int      @unique
+  state      Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  seats PokerSeat[]
+}
+
+model PokerSeat {
+  id         String   @id @default(cuid())
+  tableId    String
+  userId     String
+  seatIndex  Int
+  stackCents Int
+  createdAt  DateTime @default(now())
+
+  table PokerTable @relation(fields: [tableId], references: [id])
+  user  User       @relation(fields: [userId], references: [id])
+
+  @@unique([tableId, seatIndex])
+  @@unique([tableId, userId])
+  @@index([userId])
+}
+
+model SportsLeague {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  teams   SportsTeam[]
+  matches SportsMatch[]
+}
+
+model SportsTeam {
+  id       String @id @default(cuid())
+  name     String
+  slug     String @unique
+  leagueId String
+
+  league      SportsLeague @relation(fields: [leagueId], references: [id])
+  homeMatches SportsMatch[] @relation("HomeTeam")
+  awayMatches SportsMatch[] @relation("AwayTeam")
+}
+
+model SportsMatch {
+  id         String   @id @default(cuid())
+  leagueId   String
+  homeTeamId String
+  awayTeamId String
+  startTime  DateTime
+  status     String   @default("scheduled")
+  result     String?
+  oddsHome   Int
+  oddsDraw   Int
+  oddsAway   Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  league   SportsLeague @relation(fields: [leagueId], references: [id])
+  homeTeam SportsTeam   @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam SportsTeam   @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  bets     SportsBet[]
+
+  @@index([leagueId, startTime])
+}
+
+model SportsBet {
+  id          String   @id @default(cuid())
+  userId      String
+  matchId     String
+  pick        String
+  odds        Int
+  stakeCents  Int
+  payoutCents Int?
+  status      String   @default("pending")
+  settledAt   DateTime?
+  createdAt   DateTime @default(now())
+
+  user  User        @relation(fields: [userId], references: [id])
+  match SportsMatch @relation(fields: [matchId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([matchId])
 }

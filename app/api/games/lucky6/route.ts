@@ -10,7 +10,9 @@ import {
   isEven,
   isHigh,
   Lucky6Color,
+  Lucky6Ball,
 } from "@/lib/lucky6";
+import { getLucky6RoundId } from "@/lib/lucky6-rounds";
 
 export const runtime = "nodejs";
 
@@ -201,7 +203,26 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Insufficient balance" }, { status: 400 });
   }
 
-  const draw = runLucky6Draw();
+  const roundId = getLucky6RoundId(Date.now());
+  const existingRound = await prisma.lucky6Round.findUnique({
+    where: { roundId },
+  });
+  const draw = existingRound
+    ? {
+        balls: existingRound.balls as Lucky6Ball[],
+        completionOrder: existingRound.completionOrder as Partial<Record<Lucky6Color, number>>,
+      }
+    : runLucky6Draw(roundId);
+
+  if (!existingRound) {
+    await prisma.lucky6Round.create({
+      data: {
+        roundId,
+        balls: draw.balls,
+        completionOrder: draw.completionOrder,
+      },
+    });
+  }
   const firstBall = draw.balls[0];
   const firstFive = draw.balls.slice(0, 5);
   const firstFiveSum = firstFive.reduce((sum, b) => sum + b.number, 0);
@@ -304,6 +325,7 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     ok: true,
+    roundId,
     draw: {
       balls: draw.balls,
       completionOrder: draw.completionOrder,

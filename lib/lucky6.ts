@@ -67,23 +67,53 @@ export function generateDeck(): Lucky6Ball[] {
   return balls;
 }
 
-function shuffle<T>(arr: T[]): T[] {
+type RandomSource = () => number;
+
+function shuffle<T>(arr: T[], rng: RandomSource): T[] {
   const copy = arr.slice();
   for (let i = copy.length - 1; i > 0; i -= 1) {
-    const j = randomInt(i + 1);
+    const j = Math.floor(rng() * (i + 1));
     [copy[i], copy[j]] = [copy[j], copy[i]];
   }
   return copy;
 }
 
-function randomInt(max: number): number {
+function cryptoRandom(): number {
   const buf = new Uint32Array(1);
   crypto.getRandomValues(buf);
-  return Math.floor((buf[0] / 0x100000000) * max);
+  return buf[0] / 0x100000000;
 }
 
-export function runLucky6Draw(): Lucky6Draw {
-  const deck = shuffle(generateDeck());
+function hashSeed(seed: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i += 1) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function normalizeSeed(seed: string | number): number {
+  if (typeof seed === "number" && Number.isFinite(seed)) {
+    return seed >>> 0;
+  }
+  return hashSeed(String(seed));
+}
+
+function createSeededRandom(seed: number): RandomSource {
+  let t = seed >>> 0;
+  return () => {
+    t += 0x6d2b79f5;
+    let r = t;
+    r = Math.imul(r ^ (r >>> 15), r | 1);
+    r ^= r + Math.imul(r ^ (r >>> 7), r | 61);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export function runLucky6Draw(seed?: string | number): Lucky6Draw {
+  const rng = seed === undefined ? cryptoRandom : createSeededRandom(normalizeSeed(seed));
+  const deck = shuffle(generateDeck(), rng);
   const drawn = deck.slice(0, 35);
 
   const counts: Record<Lucky6Color, number> = {
