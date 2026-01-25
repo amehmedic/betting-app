@@ -157,7 +157,6 @@ export default function Lucky6Page() {
   const [timeLeftMs, setTimeLeftMs] = useState(initialRound.nextRound - Date.now());
   const drawSlots = 35;
   const pendingWalletUpdate = useRef(false);
-  const pendingWalletUpdate = useRef(false);
 
   const formatQuota = (value: number) => {
     return String(value);
@@ -179,7 +178,6 @@ export default function Lucky6Page() {
     value > 0 ? (
       <span
         className={clsx(
-          "pointer-events-none absolute left-1/2 top-1/2 inline-flex min-w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-[#c5305f] px-2 py-1 text-[11px] font-semibold text-white shadow-lg shadow-black/40",
           "pointer-events-none absolute left-1/2 top-1/2 inline-flex min-w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-[#c5305f] px-2 py-1 text-[11px] font-semibold text-white shadow-lg shadow-black/40",
           extra
         )}
@@ -536,9 +534,6 @@ export default function Lucky6Page() {
         <section className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-5 shadow-xl shadow-black/30 text-left">
           <div className="grid gap-5 lg:grid-cols-[50%_50%]">
             <div className="space-y-2">
-        <section className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-5 shadow-xl shadow-black/30 text-left">
-          <div className="grid gap-5 lg:grid-cols-[50%_50%]">
-            <div className="space-y-2">
               <div className="flex flex-col items-center gap-2">
                 <label className="text-xs uppercase tracking-wide text-slate-400">Bet amount (USD)</label>
                 <input
@@ -554,8 +549,6 @@ export default function Lucky6Page() {
                   {stakeAmount ? `$${Number(stakeAmount).toFixed(2)}` : "$0.00"}
                 </span>
               </div>
-              <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-3 shadow-inner shadow-black/30 space-y-2 text-center">
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
                 <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-3 shadow-inner shadow-black/30 space-y-2 text-center">
                   <div className="text-xs uppercase tracking-wide text-slate-400">First ball parity</div>
@@ -576,7 +569,6 @@ export default function Lucky6Page() {
                     ))}
                   </div>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-3 shadow-inner shadow-black/30 space-y-2 text-center">
                 <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-3 shadow-inner shadow-black/30 space-y-2 text-center">
                   <div className="text-xs uppercase tracking-wide text-slate-400">First ball value</div>
                   <div className="grid grid-cols-2 gap-2">
@@ -600,7 +592,6 @@ export default function Lucky6Page() {
 
               <div className="grid gap-2 sm:grid-cols-2">
                 <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-3 shadow-inner shadow-black/30 space-y-2 text-center">
-                <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-3 shadow-inner shadow-black/30 space-y-2 text-center">
                   <div className="text-xs uppercase tracking-wide text-slate-400">First 5 balls parity</div>
                   <div className="grid grid-cols-2 gap-2">
                     {["even", "odd"].map((opt) => (
@@ -619,7 +610,6 @@ export default function Lucky6Page() {
                     ))}
                   </div>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-3 shadow-inner shadow-black/30 space-y-2 text-center">
                 <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-3 shadow-inner shadow-black/30 space-y-2 text-center">
                   <div className="text-xs uppercase tracking-wide text-slate-400">Sum of first 5 balls</div>
                   <div className="grid grid-cols-2 gap-2">
@@ -641,8 +631,6 @@ export default function Lucky6Page() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-3 shadow-inner shadow-black/30 space-y-3">
-                <div className="text-center">
               <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-3 shadow-inner shadow-black/30 space-y-3">
                 <div className="text-center">
                   <div className="text-sm font-semibold text-white">First ball color</div>
@@ -677,12 +665,9 @@ export default function Lucky6Page() {
 
               <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-3 shadow-inner shadow-black/30 space-y-3">
                 <div className="text-center">
-              <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-3 shadow-inner shadow-black/30 space-y-3">
-                <div className="text-center">
                   <div className="text-sm font-semibold text-white">Combo builder</div>
                   <div className="text-xs text-slate-400">Select any 6 numbers (max 6).</div>
                 </div>
-                <div className="grid grid-cols-8 gap-2 rounded-xl border border-white/5 bg-slate-950/50 p-2">
                 <div className="grid grid-cols-8 gap-2 rounded-xl border border-white/5 bg-slate-950/50 p-2">
                   {Array.from({ length: 48 }, (_, i) => i + 1).map((num) => {
                     const color = colorForNumber(num);
@@ -741,10 +726,8 @@ export default function Lucky6Page() {
                   })}
                 </div>
                 <div className="space-y-2 text-center">
-                <div className="space-y-2 text-center">
                   <label className="text-xs uppercase tracking-wide text-slate-400">Selected numbers</label>
                   <div className="flex flex-wrap items-center gap-2">
-                    <div className="flex-1 flex flex-wrap justify-center gap-2 rounded-lg border border-white/10 bg-slate-950/40 px-3 py-2 text-sm text-slate-300 text-center">
                     <div className="flex-1 flex flex-wrap justify-center gap-2 rounded-lg border border-white/10 bg-slate-950/40 px-3 py-2 text-sm text-slate-300 text-center">
                       {comboSelection.length === 0 ? (
                         <span className="text-slate-500">Select up to 6 numbers</span>
@@ -769,8 +752,6 @@ export default function Lucky6Page() {
                           })
                       )}
                     </div>
-                  </div>
-                  <div className="flex justify-center">
                   </div>
                   <div className="flex justify-center">
                     <button
@@ -1074,7 +1055,6 @@ const ballBase = `
   @keyframes ball-drop {
     0% {
       transform: translateY(-22px) scale(0.9);
-      transform: translateY(-22px) scale(0.9);
       opacity: 0;
     }
     100% {
@@ -1084,16 +1064,6 @@ const ballBase = `
   }
 `;
 
-if (typeof document !== "undefined") {
-  const existing = document.getElementById("lucky6-ball-style") as HTMLStyleElement | null;
-  if (existing) {
-    existing.textContent = ballBase;
-  } else {
-    const style = document.createElement("style");
-    style.id = "lucky6-ball-style";
-    style.textContent = ballBase;
-    document.head.appendChild(style);
-  }
 if (typeof document !== "undefined") {
   const existing = document.getElementById("lucky6-ball-style") as HTMLStyleElement | null;
   if (existing) {

@@ -1,6 +1,8 @@
 ﻿"use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function RegisterPage() {
@@ -9,13 +11,22 @@ export default function RegisterPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const { status } = useSession();
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace("/");
+    }
+  }, [router, status]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const formEl = e.currentTarget;
     setLoading(true);
     setMessage(null);
     setError(null);
-    const form = new FormData(e.currentTarget);
+    const form = new FormData(formEl);
     const email = String(form.get("email"));
     const username = String(form.get("username"));
     const password = String(form.get("password"));
@@ -39,7 +50,7 @@ export default function RegisterPage() {
         return;
       }
       setMessage("Account created. You can log in now.");
-      e.currentTarget.reset();
+      formEl.reset();
     } catch (err) {
       console.error(err);
       setError("Registration failed.");

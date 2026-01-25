@@ -182,6 +182,7 @@ model SportsLeague {
   id        String   @id @default(cuid())
   name      String
   slug      String   @unique
+  sport     String   @default("football")
   createdAt DateTime @default(now())
 
   teams   SportsTeam[]
@@ -201,6 +202,7 @@ model SportsTeam {
 
 model SportsMatch {
   id         String   @id @default(cuid())
+  externalId String?  @unique
   leagueId   String
   homeTeamId String
   awayTeamId String

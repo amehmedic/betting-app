@@ -43,8 +43,14 @@ export async function POST(req: Request) {
         throw new Error("Match already started");
       }
 
+      if (pick === "draw" && match.oddsDraw <= 0) {
+        throw new Error("Draw is not available for this match");
+      }
       const odds =
         pick === "home" ? match.oddsHome : pick === "draw" ? match.oddsDraw : match.oddsAway;
+      if (odds <= 0) {
+        throw new Error("Invalid odds for selected pick");
+      }
 
       const wallet =
         (await tx.wallet.findFirst({
